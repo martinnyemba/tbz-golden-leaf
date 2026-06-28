@@ -235,6 +235,7 @@ fun PermitListScreen(
 @Composable
 fun PermitDetailScreen(
     localId: String,
+    onOpenCorrection: (String) -> Unit = {},
     viewModel: PermitViewModel = hiltViewModel(),
 ) {
     val transport by viewModel.observeTransportPermit(localId).collectAsState()
@@ -262,7 +263,10 @@ fun PermitDetailScreen(
                     }
                     if (transport!!.status == "RETURNED_FOR_CORRECTION") {
                         transport!!.correction_reason?.let { InfoBanner("Correction reason: $it") }
-                        Text("Use the portal or sync to resubmit corrections after editing.")
+                        Button(
+                            onClick = { onOpenCorrection(localId) },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) { Text("Fix & resubmit") }
                     }
                     if (reviewState.submitSuccess) {
                         InfoBanner("Review queued for sync")

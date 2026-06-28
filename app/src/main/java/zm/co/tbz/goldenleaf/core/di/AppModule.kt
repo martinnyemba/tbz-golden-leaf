@@ -45,4 +45,7 @@ object AppModule {
 
     @Provides
     fun provideUtilityDao(db: TrmsDatabase): UtilityDao = db.utilityDao()
+
+    @Provides
+    fun provideGrowerDocumentDao(db: TrmsDatabase): GrowerDocumentDao = db.growerDocumentDao()
 }

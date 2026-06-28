@@ -20,6 +20,7 @@ data class GroupPermitEntryForm(
     val totalBales: String = "",
     val totalWeightKg: String = "",
     val notes: String = "",
+    val isExisting: Boolean = false,
 )
 
 data class GroupPermitCreateUiState(

@@ -71,6 +71,30 @@ data class PermitReviewUiState(
     val submitSuccess: Boolean = false,
 )
 
+data class PermitCorrectionForm(
+    val growerId: String = "",
+    val growerCategory: String = "SMALL_SCALE",
+    val totalBales: String = "",
+    val totalWeightKg: String = "",
+    val licensePlate: String = "",
+    val originProvince: String = "",
+    val originDistrict: String = "",
+    val destinationSalesFloor: String = "",
+    val purpose: String = "SALES",
+    val buyerId: String = "",
+    val isBought: Boolean = false,
+    val buyerAccepted: Boolean = false,
+    val comments: String = "",
+)
+
+data class PermitCorrectionUiState(
+    val form: PermitCorrectionForm = PermitCorrectionForm(),
+    val fieldErrors: Map<String, String> = emptyMap(),
+    val isSaving: Boolean = false,
+    val saveError: String? = null,
+    val saveSuccess: Boolean = false,
+)
+
 object PermitReviewActions {
     const val APPROVE = "approve"
     const val REJECT = "reject"

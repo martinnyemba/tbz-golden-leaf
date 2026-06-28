@@ -39,10 +39,11 @@ interface TrmcsApi {
 
     @Multipart
     @POST("mobile/growers/{id}/documents/")
-    suspend fun uploadGrowerDocument(
+    suspend fun uploadGrowerDocuments(
         @Path("id") growerId: String,
-        @Part file: MultipartBody.Part,
-        @Part("document_type") documentType: String
+        @Part profile_photo: MultipartBody.Part? = null,
+        @Part id_front: MultipartBody.Part? = null,
+        @Part id_back: MultipartBody.Part? = null,
     ): Unit
 
     // --- Notifications ---

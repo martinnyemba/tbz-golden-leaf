@@ -29,9 +29,10 @@ import zm.co.tbz.goldenleaf.data.local.entity.*
         BaleEntity::class,
         PendingSaleEntity::class,
         NotificationEntity::class,
-        SyncAuditEntity::class
+        SyncAuditEntity::class,
+        GrowerDocumentUploadEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class TrmsDatabase : RoomDatabase() {
@@ -42,4 +43,6 @@ abstract class TrmsDatabase : RoomDatabase() {
     abstract fun inspectionDao(): InspectionDao
     abstract fun marketingDao(): MarketingDao
     abstract fun utilityDao(): UtilityDao
+
+    abstract fun growerDocumentDao(): GrowerDocumentDao
 }

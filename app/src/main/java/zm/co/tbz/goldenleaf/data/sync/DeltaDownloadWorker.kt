@@ -120,6 +120,10 @@ class DeltaDownloadWorker @AssistedInject constructor(
                     correction_reason = dto.correction_reason,
                     rejection_reason = dto.rejection_reason,
                     comments = dto.comments,
+                    grower_category = dto.grower_category.orEmpty().ifBlank { "SMALL_SCALE" },
+                    buyer_id = dto.buyer,
+                    is_bought = dto.is_bought ?: false,
+                    buyer_accepted = dto.buyer_accepted ?: false,
                 )
             }
             permitRepository.upsertTransportPermits(entities)

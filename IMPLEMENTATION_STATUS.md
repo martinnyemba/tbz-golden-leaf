@@ -11,12 +11,11 @@ Legend: **Done** | **Partial** | **Not started**
 | Kotlin + Compose + Hilt + Room + WorkManager + Retrofit | Done | |
 | TBZ brand theme (OKLCH tokens) | Done | `ui/theme/` |
 | Offline queue + sync bulk upload | Done | `UploadSyncWorker` |
-| Delta download growers | Done | `DeltaDownloadWorker` |
-| Delta download permits/inspections/group permits | Done | Transport + group permit delta pull |
+| Delta download growers/permits/group permits/inspections | Done | `DeltaDownloadWorker` |
 | Reference refresh worker | Done | |
 | Session refresh worker | Done | |
 | RBAC service | Partial | `AccessControlService`; menu + permit approval gating |
-| Document upload (grower photos) | Not started | API exists; UI queues grower POST only |
+| Document upload (grower photos) | Done | Queued after registration; multipart upload post-sync |
 
 ## §1 Authentication
 
@@ -54,8 +53,8 @@ Legend: **Done** | **Partial** | **Not started**
 | `/registration/grower-correction` | Done |
 | `/grower-updates` | Done |
 | `/registration/crop-allocation` | Done |
-| `/corrections` | Partial | Growers only; permits/group permits TODO |
-| Photo sync to `mobile/growers/{id}/documents/` | Not started |
+| `/corrections` | Done | Growers + transport + group permits |
+| Photo sync to `mobile/growers/{id}/documents/` | Done | After grower POST sync |
 
 ## §4 Inspection
 
@@ -93,13 +92,13 @@ Legend: **Done** | **Partial** | **Not started**
 | `/permit-validate` | Done | Text + QR scanner |
 | `/permit-list` | Done |
 | `/permit-detail` | Done | Approve/reject/return panel when `permits.approve_permit` |
+| `/permit-correction` | Done | PATCH + resubmit via sync bulk |
 | `/permit-group` hub | Done |
 | `/permit-group/create` | Done | Header + entries (min 2 growers) |
 | `/permit-group/validate` | Done | QR + `validate-qr` API |
 | `/permit-group/status` | Done |
 | `/permit-group/detail` | Done | Review panel + correction link |
-| `/permit-group/correction` | Partial | Resubmit queue; full header/entry edit TODO |
-| Transport permit correction resubmit | Partial | Reason shown; PATCH/resubmit UI TODO |
+| `/permit-group/correction` | Done | Header edit + add entries + resubmit |
 
 ## §7 Other
 
@@ -110,8 +109,7 @@ Legend: **Done** | **Partial** | **Not started**
 
 ## Next priorities
 
-1. Transport permit correction PATCH + resubmit screen
-2. Full group permit correction edit (header + manifest)
-3. Grower document multipart upload after grower sync
-4. Cross-module corrections inbox (permits + group permits)
-5. Pull static legal copy from TRMCS or bundled assets
+1. Pull static legal copy from TRMCS or bundled assets
+2. Arbitration full form module
+3. Renewal module
+4. Inspection lookup enhancements

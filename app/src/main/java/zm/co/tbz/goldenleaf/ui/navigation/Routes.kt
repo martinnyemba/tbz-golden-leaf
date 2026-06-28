@@ -57,6 +57,7 @@ object Routes {
     const val PERMIT_VALIDATE = "permit-validate"
     const val PERMIT_LIST = "permit-list"
     const val PERMIT_DETAIL = "permit-detail/{localId}"
+    const val PERMIT_CORRECTION = "permit-correction/{localId}"
 
     // Group permits
     const val PERMIT_GROUP = "permit-group"
@@ -81,6 +82,7 @@ object Routes {
     fun validation(inspectionId: String) = "validation/$inspectionId"
     fun editPendingSale(localId: String) = "pending-sales/edit/$localId"
     fun permitDetail(localId: String) = "permit-detail/$localId"
+    fun permitCorrection(localId: String) = "permit-correction/$localId"
     fun groupPermitDetail(localId: String) = "permit-group/detail/$localId"
     fun groupPermitCorrection(localId: String) = "permit-group/correction/$localId"
     fun placeholder(title: String) = "placeholder/$title"

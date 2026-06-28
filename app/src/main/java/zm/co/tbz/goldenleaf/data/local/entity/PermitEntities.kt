@@ -31,6 +31,10 @@ data class TransportPermitEntity(
     val correction_reason: String? = null,
     val rejection_reason: String? = null,
     val comments: String? = null,
+    val grower_category: String = "SMALL_SCALE",
+    val buyer_id: String? = null,
+    val is_bought: Boolean = false,
+    val buyer_accepted: Boolean = false,
 )
 
 @Entity(tableName = "group_permits")

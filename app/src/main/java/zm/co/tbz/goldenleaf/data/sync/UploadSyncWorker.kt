@@ -15,6 +15,7 @@ import zm.co.tbz.goldenleaf.data.remote.api.TrmcsApi
 import zm.co.tbz.goldenleaf.data.remote.dto.SyncBulkRequest
 import zm.co.tbz.goldenleaf.data.remote.dto.SyncItemDto
 import zm.co.tbz.goldenleaf.data.repository.AuthRepository
+import zm.co.tbz.goldenleaf.data.repository.GrowerRepository
 import zm.co.tbz.goldenleaf.data.repository.PermitRepository
 import zm.co.tbz.goldenleaf.data.repository.SyncRepository
 import java.time.Instant
@@ -31,6 +32,7 @@ class UploadSyncWorker @AssistedInject constructor(
     private val userPreferences: UserPreferences,
     private val json: Json,
     private val permitRepository: PermitRepository,
+    private val growerRepository: GrowerRepository,
 ) : CoroutineWorker(context, workerParams) {
 
     override suspend fun doWork(): Result {
@@ -69,7 +71,9 @@ class UploadSyncWorker @AssistedInject constructor(
                     )
                     if (status == SyncStatuses.SYNCED) {
                         result.server_data?.let { serverData ->
+                            val encoded = json.encodeToString(JsonElement.serializer(), serverData)
                             handleGroupPermitContinuation(result.client_id, serverData)
+                            growerRepository.handleGrowerCreateSync(result.client_id, encoded)
                         }
                     }
                 }

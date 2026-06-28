@@ -183,6 +183,26 @@ class PermitRepository @Inject constructor(
         )
     }
 
+    suspend fun patchTransportPermit(localId: String, remoteId: String, payloadJson: String) {
+        val patchId = "$localId-patch-${UUID.randomUUID()}"
+        enqueue(patchId, "PATCH", "permits/transport-permits/$remoteId/", payloadJson)
+    }
+
+    suspend fun resubmitTransportPermitCorrections(localId: String, remoteId: String) {
+        enqueue(
+            "$localId-resubmit",
+            "POST",
+            "permits/transport-permits/$remoteId/resubmit-corrections/",
+            "{}",
+        )
+    }
+
+    suspend fun queueGroupPermitEntry(remoteId: String, entryJson: String): String {
+        val entryId = UUID.randomUUID().toString()
+        enqueue(entryId, "POST", "permits/group-permits/$remoteId/entries/", entryJson)
+        return entryId
+    }
+
     suspend fun patchGroupPermitHeader(localId: String, remoteId: String, headerJson: String) {
         enqueue(localId, "PATCH", "permits/group-permits/$remoteId/", headerJson)
     }

@@ -201,24 +201,6 @@ fun GrowerDetailScreen(
 }
 
 @Composable
-fun CorrectionsScreen(
-    onOpenCorrection: (String) -> Unit,
-    viewModel: RegistrationViewModel = hiltViewModel(),
-) {
-    val corrections by viewModel.corrections.collectAsState()
-    Scaffold(topBar = { TbzTopBar("Corrections inbox") }) { padding ->
-        LazyColumn(
-            Modifier.fillMaxSize().padding(padding).padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            items(corrections, key = { it.local_id }) { grower ->
-                GrowerRow(grower = grower, onClick = { onOpenCorrection(grower.local_id) })
-            }
-        }
-    }
-}
-
-@Composable
 private fun GrowerRow(grower: GrowerEntity, onClick: () -> Unit) {
     Card(Modifier.fillMaxWidth().clickable(onClick = onClick)) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {

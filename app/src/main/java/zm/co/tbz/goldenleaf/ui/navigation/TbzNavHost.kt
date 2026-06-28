@@ -56,17 +56,18 @@ import zm.co.tbz.goldenleaf.ui.modules.StaticContentScreen
 import zm.co.tbz.goldenleaf.ui.permits.GroupPermitCorrectionScreen
 import zm.co.tbz.goldenleaf.ui.permits.GroupPermitCreateScreen
 import zm.co.tbz.goldenleaf.ui.permits.GroupPermitDetailScreen
+import zm.co.tbz.goldenleaf.ui.permits.PermitDetailScreen
 import zm.co.tbz.goldenleaf.ui.permits.GroupPermitHubScreen
 import zm.co.tbz.goldenleaf.ui.permits.GroupPermitStatusListScreen
 import zm.co.tbz.goldenleaf.ui.permits.GroupPermitValidateScreen
-import zm.co.tbz.goldenleaf.ui.permits.PermitDetailScreen
+import zm.co.tbz.goldenleaf.ui.permits.PermitCorrectionScreen
 import zm.co.tbz.goldenleaf.ui.permits.PermitListScreen
 import zm.co.tbz.goldenleaf.ui.permits.PermitRequestScreen
 import zm.co.tbz.goldenleaf.ui.permits.PermitValidateScreen
 import zm.co.tbz.goldenleaf.ui.permits.PermitsHubScreen
 import zm.co.tbz.goldenleaf.ui.notifications.NotificationsScreen
 import zm.co.tbz.goldenleaf.ui.profile.ProfileScreen
-import zm.co.tbz.goldenleaf.ui.registration.CorrectionsScreen
+import zm.co.tbz.goldenleaf.ui.corrections.CorrectionsScreen
 import zm.co.tbz.goldenleaf.ui.registration.CropAllocationScreen
 import zm.co.tbz.goldenleaf.ui.registration.GrowerCorrectionScreen
 import zm.co.tbz.goldenleaf.ui.registration.GrowerDetailScreen
@@ -190,7 +191,11 @@ fun TbzNavHost(
             )
         }
         composable(Routes.CORRECTIONS) {
-            CorrectionsScreen(onOpenCorrection = { navController.navigate(Routes.registrationCorrection(it)) })
+            CorrectionsScreen(
+                onOpenGrowerCorrection = { navController.navigate(Routes.registrationCorrection(it)) },
+                onOpenTransportPermitCorrection = { navController.navigate(Routes.permitCorrection(it)) },
+                onOpenGroupPermitCorrection = { navController.navigate(Routes.groupPermitCorrection(it)) },
+            )
         }
         composable(Routes.INSPECTION) {
             InspectionHubScreen(
@@ -315,7 +320,20 @@ fun TbzNavHost(
             route = Routes.PERMIT_DETAIL,
             arguments = listOf(navArgument("localId") { type = NavType.StringType }),
         ) { entry ->
-            PermitDetailScreen(localId = entry.arguments?.getString("localId").orEmpty())
+            val localId = entry.arguments?.getString("localId").orEmpty()
+            PermitDetailScreen(
+                localId = localId,
+                onOpenCorrection = { navController.navigate(Routes.permitCorrection(it)) },
+            )
+        }
+        composable(
+            route = Routes.PERMIT_CORRECTION,
+            arguments = listOf(navArgument("localId") { type = NavType.StringType }),
+        ) { entry ->
+            PermitCorrectionScreen(
+                localId = entry.arguments?.getString("localId").orEmpty(),
+                onDone = { navController.popBackStack() },
+            )
         }
         composable(Routes.PERMIT_GROUP) {
             GroupPermitHubScreen(

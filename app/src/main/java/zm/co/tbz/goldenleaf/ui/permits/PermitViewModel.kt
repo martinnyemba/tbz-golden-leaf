@@ -48,6 +48,9 @@ class PermitViewModel @Inject constructor(
     private val _reviewState = MutableStateFlow(PermitReviewUiState())
     val reviewState: StateFlow<PermitReviewUiState> = _reviewState.asStateFlow()
 
+    private val _correctionState = MutableStateFlow(PermitCorrectionUiState())
+    val correctionState: StateFlow<PermitCorrectionUiState> = _correctionState.asStateFlow()
+
     val canApprovePermit = MutableStateFlow(false)
 
     val transportPermits = permitRepository.observeTransportPermits().stateIn(
@@ -367,5 +370,105 @@ class PermitViewModel @Inject constructor(
             errors["buyerId"] = "Buyer is required when tobacco is already bought"
         }
         return errors
+    }
+
+    fun loadCorrectionFromPermit(permit: TransportPermitEntity) {
+        _correctionState.value = PermitCorrectionUiState(
+            form = PermitCorrectionForm(
+                growerId = permit.grower_id,
+                growerCategory = permit.grower_category,
+                totalBales = permit.total_bales.toString(),
+                totalWeightKg = permit.total_weight_kg.toString(),
+                licensePlate = permit.license_plate,
+                originProvince = permit.origin_province,
+                originDistrict = permit.origin_district,
+                destinationSalesFloor = permit.destination_sales_floor,
+                purpose = permit.purpose,
+                buyerId = permit.buyer_id.orEmpty(),
+                isBought = permit.is_bought,
+                buyerAccepted = permit.buyer_accepted,
+                comments = permit.comments.orEmpty(),
+            ),
+        )
+    }
+
+    fun updateCorrectionForm(transform: (PermitCorrectionForm) -> PermitCorrectionForm) {
+        _correctionState.update { it.copy(form = transform(it.form), fieldErrors = emptyMap()) }
+    }
+
+    fun saveTransportPermitCorrection(localId: String, remoteId: String, onSaved: () -> Unit) {
+        val errors = validateCorrectionForm(_correctionState.value.form)
+        if (errors.isNotEmpty()) {
+            _correctionState.update { it.copy(fieldErrors = errors) }
+            return
+        }
+        viewModelScope.launch {
+            _correctionState.update { it.copy(isSaving = true, saveError = null) }
+            try {
+                val payload = buildCorrectionPayload(_correctionState.value.form)
+                permitRepository.patchTransportPermit(localId, remoteId, payload)
+                _correctionState.update { it.copy(isSaving = false, saveSuccess = true) }
+                permitRepository.triggerSync()
+                onSaved()
+            } catch (e: Exception) {
+                _correctionState.update {
+                    it.copy(isSaving = false, saveError = e.message ?: "Save failed")
+                }
+            }
+        }
+    }
+
+    fun resubmitTransportPermitCorrection(localId: String, remoteId: String, onDone: () -> Unit) {
+        viewModelScope.launch {
+            _correctionState.update { it.copy(isSaving = true, saveError = null) }
+            try {
+                permitRepository.resubmitTransportPermitCorrections(localId, remoteId)
+                _correctionState.update { it.copy(isSaving = false, saveSuccess = true) }
+                permitRepository.triggerSync()
+                onDone()
+            } catch (e: Exception) {
+                _correctionState.update {
+                    it.copy(isSaving = false, saveError = e.message ?: "Resubmit failed")
+                }
+            }
+        }
+    }
+
+    private fun buildCorrectionPayload(form: PermitCorrectionForm): String {
+        val payload = buildJsonObject {
+            put("grower", form.growerId)
+            put("grower_category", form.growerCategory)
+            put("total_bales", form.totalBales.toIntOrNull() ?: 0)
+            put("total_weight_kg", form.totalWeightKg.toDoubleOrNull() ?: 0.0)
+            put("license_plate", form.licensePlate.trim().uppercase())
+            put("origin_province", form.originProvince)
+            put("origin_district", form.originDistrict)
+            put("destination_sales_floor", form.destinationSalesFloor)
+            put("purpose", form.purpose)
+            if (form.buyerId.isNotBlank()) put("buyer", form.buyerId)
+            put("is_bought", form.isBought)
+            put("buyer_accepted", form.buyerAccepted)
+            put("comments", form.comments.trim())
+        }
+        return json.encodeToString(JsonObject.serializer(), payload)
+    }
+
+    private fun validateCorrectionForm(form: PermitCorrectionForm): Map<String, String> {
+        val requestForm = PermitRequestForm(
+            growerId = form.growerId,
+            growerCategory = form.growerCategory,
+            totalBales = form.totalBales,
+            totalWeightKg = form.totalWeightKg,
+            licensePlate = form.licensePlate,
+            originProvince = form.originProvince,
+            originDistrict = form.originDistrict,
+            destinationSalesFloor = form.destinationSalesFloor,
+            purpose = form.purpose,
+            buyerId = form.buyerId,
+            isBought = form.isBought,
+            buyerAccepted = form.buyerAccepted,
+            comments = form.comments,
+        )
+        return validateBuyerStep(requestForm)
     }
 }

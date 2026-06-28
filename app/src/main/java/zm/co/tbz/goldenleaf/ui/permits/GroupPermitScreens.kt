@@ -16,6 +16,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -387,27 +388,138 @@ fun GroupPermitCorrectionScreen(
     viewModel: GroupPermitViewModel = hiltViewModel(),
 ) {
     val permit by viewModel.observeGroupPermit(localId).collectAsState()
+    val uiState by viewModel.createState.collectAsState()
+    val header = uiState.header
+    val provinces by viewModel.provinces.collectAsState()
+    val salesFloors by viewModel.salesFloors.collectAsState()
+    val growers by viewModel.growers.collectAsState()
+    val districts by viewModel.districtsForProvince(header.originProvince)
+        .collectAsState(initial = emptyList())
+    var entryForm by remember { mutableStateOf(GroupPermitEntryForm()) }
+
+    LaunchedEffect(permit?.local_id) {
+        permit?.let { viewModel.loadCorrectionFromPermit(it) }
+    }
 
     Scaffold(topBar = { TbzTopBar("Group permit correction") }) { padding ->
-        ScrollableFormColumn(Modifier.padding(padding)) {
-            permit?.correction_reason?.let { InfoBanner("TBZ correction reason: $it") }
-            Text(
-                "Update the group permit on the portal or resubmit after corrections are saved online.",
-                modifier = Modifier.padding(bottom = 8.dp),
-            )
-            Text("Permit: ${permit?.permit_number ?: localId}")
-            Text("Plate: ${permit?.license_plate.orEmpty()}")
-            Text("Entries: ${permit?.entry_count ?: 0}")
-            Button(
-                onClick = {
-                    val remoteId = permit?.remote_id ?: localId
-                    viewModel.resubmitGroupCorrections(localId, remoteId)
-                    onDone()
-                },
-                modifier = Modifier.fillMaxWidth(),
-            ) { Text("Resubmit for review") }
-            OutlinedButton(onClick = onDone, modifier = Modifier.fillMaxWidth()) {
-                Text("Back")
+        if (permit == null) {
+            Column(Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
+                Text("Group permit not found")
+            }
+        } else {
+            ScrollableFormColumn(Modifier.padding(padding)) {
+                permit!!.correction_reason?.let { InfoBanner("TBZ correction reason: $it") }
+                InfoBanner("Manifest must keep at least 2 growers before resubmit.")
+                FormSectionTitle("Header")
+                FormTextField(
+                    header.licensePlate,
+                    { viewModel.updateHeader { h -> h.copy(licensePlate = it) } },
+                    "License plate",
+                    error = uiState.fieldErrors["licensePlate"],
+                )
+                TbzDropdownField(
+                    label = "Origin province",
+                    options = provinces.map { it.id to it.name },
+                    selectedId = header.originProvince,
+                    onSelected = {
+                        viewModel.updateHeader { h -> h.copy(originProvince = it, originDistrict = "") }
+                    },
+                )
+                TbzDropdownField(
+                    label = "Origin district",
+                    options = districts.map { it.id to it.name },
+                    selectedId = header.originDistrict,
+                    onSelected = { viewModel.updateHeader { h -> h.copy(originDistrict = it) } },
+                )
+                TbzDropdownField(
+                    label = "Destination sales floor",
+                    options = salesFloors.map { it.id to it.name },
+                    selectedId = header.destinationSalesFloor,
+                    onSelected = { viewModel.updateHeader { h -> h.copy(destinationSalesFloor = it) } },
+                )
+                TbzDropdownField(
+                    label = "Purpose",
+                    options = PermitFormChoices.purposes,
+                    selectedId = header.purpose,
+                    onSelected = { viewModel.updateHeader { h -> h.copy(purpose = it) } },
+                )
+                FormTextField(
+                    header.comments,
+                    { viewModel.updateHeader { h -> h.copy(comments = it) } },
+                    "Comments",
+                    singleLine = false,
+                )
+                FormSectionTitle("Grower manifest (${uiState.entries.size})")
+                uiState.entries.forEach { entry ->
+                    Card(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                        Row(
+                            Modifier.fillMaxWidth().padding(12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(Modifier.weight(1f)) {
+                                Text(
+                                    entry.growerLabel.ifBlank { "Existing entry" },
+                                    fontWeight = FontWeight.SemiBold,
+                                )
+                                Text("${entry.totalBales} bales · ${entry.totalWeightKg} kg")
+                                if (entry.isExisting) Text("Synced entry")
+                            }
+                            if (!entry.isExisting) {
+                                OutlinedButton(onClick = { viewModel.removeEntry(entry.localKey) }) {
+                                    Text("Remove")
+                                }
+                            }
+                        }
+                    }
+                }
+                FormSectionTitle("Add grower entry")
+                TbzDropdownField(
+                    label = "Grower",
+                    options = growers.map { (it.remote_id ?: it.local_id) to "${it.first_name} ${it.last_name}" },
+                    selectedId = entryForm.growerId,
+                    onSelected = { id ->
+                        val label = growers.firstOrNull {
+                            (it.remote_id ?: it.local_id) == id
+                        }?.let { "${it.first_name} ${it.last_name}" }.orEmpty()
+                        entryForm = entryForm.copy(growerId = id, growerLabel = label)
+                    },
+                )
+                FormTextField(
+                    entryForm.totalBales,
+                    { entryForm = entryForm.copy(totalBales = it) },
+                    "Total bales",
+                    error = uiState.fieldErrors["totalBales"],
+                )
+                FormTextField(
+                    entryForm.totalWeightKg,
+                    { entryForm = entryForm.copy(totalWeightKg = it) },
+                    "Total weight (kg)",
+                    error = uiState.fieldErrors["totalWeightKg"],
+                )
+                Button(
+                    onClick = {
+                        if (viewModel.addEntryFromForm(entryForm)) {
+                            entryForm = GroupPermitEntryForm()
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text("Add entry") }
+                uiState.saveError?.let { ErrorText(it) }
+                val remoteId = permit!!.remote_id ?: permit!!.local_id
+                FormActionRow(
+                    primaryLabel = if (uiState.isSaving) "Saving…" else "Save corrections",
+                    onPrimary = { viewModel.saveGroupPermitCorrection(localId, remoteId) {} },
+                    secondaryLabel = "Resubmit for review",
+                    onSecondary = {
+                        viewModel.resubmitGroupCorrections(localId, remoteId)
+                        onDone()
+                    },
+                    primaryEnabled = !uiState.isSaving && uiState.entries.size >= 2,
+                )
+                OutlinedButton(onClick = onDone, modifier = Modifier.fillMaxWidth()) {
+                    Text("Back")
+                }
             }
         }
     }

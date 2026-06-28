@@ -20,6 +20,7 @@ import kotlinx.serialization.json.put
 import zm.co.tbz.goldenleaf.core.rbac.AccessControlService
 import zm.co.tbz.goldenleaf.data.local.entity.GroupPermitDraftEntity
 import zm.co.tbz.goldenleaf.data.local.entity.GroupPermitEntity
+import zm.co.tbz.goldenleaf.data.remote.dto.GroupPermitEntryDto
 import zm.co.tbz.goldenleaf.data.repository.GrowerRepository
 import zm.co.tbz.goldenleaf.data.repository.PermitRepository
 import zm.co.tbz.goldenleaf.data.repository.ReferenceRepository
@@ -157,7 +158,7 @@ class GroupPermitViewModel @Inject constructor(
             _createState.update { it.copy(fieldErrors = errors) }
             return false
         }
-        val entry = form.copy(localKey = UUID.randomUUID().toString())
+        val entry = form.copy(localKey = UUID.randomUUID().toString(), isExisting = false)
         _createState.update {
             it.copy(entries = it.entries + entry, fieldErrors = emptyMap())
         }
@@ -287,6 +288,67 @@ class GroupPermitViewModel @Inject constructor(
         viewModelScope.launch {
             permitRepository.resubmitGroupPermitCorrections(localId, remoteId)
             permitRepository.triggerSync()
+        }
+    }
+
+    fun loadCorrectionFromPermit(permit: GroupPermitEntity) {
+        val entries = parseCachedEntries(permit.entries_json)
+        _createState.value = GroupPermitCreateUiState(
+            step = 1,
+            header = GroupPermitHeaderForm(
+                licensePlate = permit.license_plate,
+                originProvince = permit.origin_province,
+                originDistrict = permit.origin_district,
+                destinationSalesFloor = permit.destination_sales_floor,
+                purpose = permit.purpose.ifBlank { "SALES" },
+                comments = permit.comments.orEmpty(),
+            ),
+            entries = entries,
+        )
+    }
+
+    fun saveGroupPermitCorrection(localId: String, remoteId: String, onSaved: () -> Unit) {
+        val state = _createState.value
+        val headerErrors = validateHeader(state.header)
+        if (headerErrors.isNotEmpty()) {
+            _createState.update { it.copy(fieldErrors = headerErrors) }
+            return
+        }
+        if (state.entries.size < 2) {
+            _createState.update { it.copy(saveError = "Group permit requires at least 2 growers") }
+            return
+        }
+        viewModelScope.launch {
+            _createState.update { it.copy(isSaving = true, saveError = null) }
+            try {
+                val headerJson = buildHeaderJson(state.header)
+                permitRepository.patchGroupPermitHeader(localId, remoteId, headerJson)
+                state.entries.filter { !it.isExisting }.forEach { entry ->
+                    val entryJson = json.encodeToString(JsonObject.serializer(), buildEntryJson(entry))
+                    permitRepository.queueGroupPermitEntry(remoteId, entryJson)
+                }
+                permitRepository.triggerSync()
+                _createState.update { it.copy(isSaving = false, saveError = null) }
+                onSaved()
+            } catch (e: Exception) {
+                _createState.update { it.copy(isSaving = false, saveError = e.message ?: "Save failed") }
+            }
+        }
+    }
+
+    private fun parseCachedEntries(entriesJson: String?): List<GroupPermitEntryForm> {
+        if (entriesJson.isNullOrBlank()) return emptyList()
+        return runCatching {
+            json.decodeFromString(ListSerializer(GroupPermitEntryDto.serializer()), entriesJson)
+        }.getOrDefault(emptyList()).map { dto ->
+            GroupPermitEntryForm(
+                localKey = dto.id,
+                growerLabel = dto.grower_name.orEmpty(),
+                growerCategory = dto.grower_category ?: "SMALL_SCALE",
+                totalBales = dto.total_bales.toString(),
+                totalWeightKg = dto.total_weight_kg.toString(),
+                isExisting = true,
+            )
         }
     }
 

@@ -41,6 +41,10 @@ data class TransportPermitDto(
     val correction_reason: String? = null,
     val rejection_reason: String? = null,
     val comments: String? = null,
+    val grower_category: String? = null,
+    val buyer: String? = null,
+    val is_bought: Boolean? = null,
+    val buyer_accepted: Boolean? = null,
 )
 
 @Serializable

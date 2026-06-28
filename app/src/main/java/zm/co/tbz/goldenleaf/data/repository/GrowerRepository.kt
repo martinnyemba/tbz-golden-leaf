@@ -1,17 +1,28 @@
 package zm.co.tbz.goldenleaf.data.repository
 
+import android.content.Context
+import android.net.Uri
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import zm.co.tbz.goldenleaf.data.local.dao.GrowerDao
+import zm.co.tbz.goldenleaf.data.local.dao.GrowerDocumentDao
+import zm.co.tbz.goldenleaf.data.local.entity.GrowerDocumentUploadEntity
 import zm.co.tbz.goldenleaf.data.local.entity.GrowerEditEntity
 import zm.co.tbz.goldenleaf.data.local.entity.GrowerEntity
 import zm.co.tbz.goldenleaf.data.local.entity.GrowerRegistrationEntity
 import zm.co.tbz.goldenleaf.data.local.entity.OfflineQueueEntity
 import zm.co.tbz.goldenleaf.data.local.entity.SyncStatuses
+import zm.co.tbz.goldenleaf.data.remote.api.TrmcsApi
 import zm.co.tbz.goldenleaf.data.sync.SyncCoordinator
 import zm.co.tbz.goldenleaf.ui.registration.CropDetailsForm
 import zm.co.tbz.goldenleaf.ui.registration.PersonalDetailsForm
@@ -23,9 +34,12 @@ import javax.inject.Singleton
 @Singleton
 class GrowerRepository @Inject constructor(
     private val growerDao: GrowerDao,
+    private val growerDocumentDao: GrowerDocumentDao,
     private val syncRepository: SyncRepository,
     private val syncCoordinator: SyncCoordinator,
+    private val api: TrmcsApi,
     private val json: Json,
+    @ApplicationContext private val context: Context,
 ) {
     fun observeGrowers(): Flow<List<GrowerEntity>> = growerDao.observeGrowers()
     fun observeGrowerById(localId: String): Flow<GrowerEntity?> = growerDao.observeGrowerById(localId)
@@ -96,6 +110,12 @@ class GrowerRepository @Inject constructor(
             endpoint = "growers/growers/",
             payloadJson = growerPayloadJson,
         )
+        queueDocumentUploads(
+            growerLocalId = localId,
+            profilePath = personal.profilePhotoPath,
+            idFrontPath = personal.idFrontPath,
+            idBackPath = personal.idBackPath,
+        )
         return localId
     }
 
@@ -147,6 +167,12 @@ class GrowerRepository @Inject constructor(
             endpoint = "growers/growers/$remoteId/",
             payloadJson = patchJson,
         )
+        queueDocumentUploads(
+            growerLocalId = growerLocalId,
+            profilePath = personal.profilePhotoPath?.takeIf { it != grower.profile_photo_path },
+            idFrontPath = personal.idFrontPath?.takeIf { it != grower.id_front_path },
+            idBackPath = personal.idBackPath?.takeIf { it != grower.id_back_path },
+        )
         return editId
     }
 
@@ -193,6 +219,98 @@ class GrowerRepository @Inject constructor(
     }
 
     suspend fun triggerSync() = syncCoordinator.scheduleUpload()
+
+    suspend fun handleGrowerCreateSync(clientId: String, serverDataJson: String) {
+        val remoteId = runCatching {
+            json.parseToJsonElement(serverDataJson).jsonObject["id"]?.jsonPrimitive?.content
+        }.getOrNull() ?: return
+        val grower = growerDao.getGrowerById(clientId) ?: return
+        growerDao.upsertGrower(
+            grower.copy(
+                remote_id = remoteId,
+                sync_status = SyncStatuses.SYNCED,
+                updated_at_local = System.currentTimeMillis(),
+            ),
+        )
+        uploadPendingDocuments(clientId)
+    }
+
+    suspend fun uploadPendingDocuments(growerLocalId: String) {
+        val grower = growerDao.getGrowerById(growerLocalId) ?: return
+        val remoteId = grower.remote_id ?: return
+        val pending = growerDocumentDao.getPendingForGrower(growerLocalId)
+        for (upload in pending) {
+            val part = uriToMultipartPart(upload.field_name, upload.file_path) ?: continue
+            try {
+                when (upload.field_name) {
+                    GrowerDocumentUploadEntity.FIELD_PROFILE ->
+                        api.uploadGrowerDocuments(remoteId, profile_photo = part)
+                    GrowerDocumentUploadEntity.FIELD_ID_FRONT ->
+                        api.uploadGrowerDocuments(remoteId, id_front = part)
+                    GrowerDocumentUploadEntity.FIELD_ID_BACK ->
+                        api.uploadGrowerDocuments(remoteId, id_back = part)
+                }
+                growerDocumentDao.upsert(
+                    upload.copy(sync_status = SyncStatuses.SYNCED, grower_remote_id = remoteId),
+                )
+            } catch (e: Exception) {
+                growerDocumentDao.upsert(
+                    upload.copy(
+                        sync_status = SyncStatuses.FAILED,
+                        last_sync_error = e.message,
+                        grower_remote_id = remoteId,
+                    ),
+                )
+            }
+        }
+    }
+
+    private suspend fun queueDocumentUploads(
+        growerLocalId: String,
+        profilePath: String?,
+        idFrontPath: String?,
+        idBackPath: String?,
+    ) {
+        val uploads = listOfNotNull(
+            profilePath?.let {
+                GrowerDocumentUploadEntity(
+                    local_id = UUID.randomUUID().toString(),
+                    grower_local_id = growerLocalId,
+                    field_name = GrowerDocumentUploadEntity.FIELD_PROFILE,
+                    file_path = it,
+                    sync_status = SyncStatuses.PENDING,
+                )
+            },
+            idFrontPath?.let {
+                GrowerDocumentUploadEntity(
+                    local_id = UUID.randomUUID().toString(),
+                    grower_local_id = growerLocalId,
+                    field_name = GrowerDocumentUploadEntity.FIELD_ID_FRONT,
+                    file_path = it,
+                    sync_status = SyncStatuses.PENDING,
+                )
+            },
+            idBackPath?.let {
+                GrowerDocumentUploadEntity(
+                    local_id = UUID.randomUUID().toString(),
+                    grower_local_id = growerLocalId,
+                    field_name = GrowerDocumentUploadEntity.FIELD_ID_BACK,
+                    file_path = it,
+                    sync_status = SyncStatuses.PENDING,
+                )
+            },
+        )
+        if (uploads.isNotEmpty()) {
+            growerDocumentDao.upsertAll(uploads)
+        }
+    }
+
+    private fun uriToMultipartPart(fieldName: String, uriString: String): MultipartBody.Part? {
+        val uri = Uri.parse(uriString)
+        val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: return null
+        val requestBody = bytes.toRequestBody("image/*".toMediaType())
+        return MultipartBody.Part.createFormData(fieldName, "$fieldName.jpg", requestBody)
+    }
 
     private suspend fun enqueue(
         localId: String,
