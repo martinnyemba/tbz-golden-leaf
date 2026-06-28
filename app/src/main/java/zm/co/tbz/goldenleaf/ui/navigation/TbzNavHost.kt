@@ -38,7 +38,7 @@ import zm.co.tbz.goldenleaf.ui.inspection.CuringInspectionFormScreen
 import zm.co.tbz.goldenleaf.ui.inspection.FieldInspectionFormScreen
 import zm.co.tbz.goldenleaf.ui.inspection.HighRiskGrowersScreen
 import zm.co.tbz.goldenleaf.ui.inspection.InspectionDetailScreen
-import zm.co.tbz.goldenleaf.ui.inspection.InspectionHubScreen
+import zm.co.tbz.goldenleaf.ui.inspection.InspectionLookupScreen
 import zm.co.tbz.goldenleaf.ui.inspection.InspectionPortalListScreen
 import zm.co.tbz.goldenleaf.ui.inspection.InspectionReportsScreen
 import zm.co.tbz.goldenleaf.ui.inspection.LocalSchedulesScreen
@@ -49,10 +49,13 @@ import zm.co.tbz.goldenleaf.ui.marketing.EditPendingSaleScreen
 import zm.co.tbz.goldenleaf.ui.marketing.MarketingHubScreen
 import zm.co.tbz.goldenleaf.ui.marketing.PendingSalesScreen
 import zm.co.tbz.goldenleaf.ui.marketing.SalesCaptureScreen
-import zm.co.tbz.goldenleaf.ui.modules.ArbitrationScreen
+import zm.co.tbz.goldenleaf.ui.arbitration.ArbitrationScreen
 import zm.co.tbz.goldenleaf.ui.modules.MenuScreen
 import zm.co.tbz.goldenleaf.ui.modules.SearchScreen
+import zm.co.tbz.goldenleaf.ui.content.AppStaticContent
+import zm.co.tbz.goldenleaf.ui.inspection.InspectionHubScreen
 import zm.co.tbz.goldenleaf.ui.modules.StaticContentScreen
+import zm.co.tbz.goldenleaf.ui.renewal.RenewalScreen
 import zm.co.tbz.goldenleaf.ui.permits.GroupPermitCorrectionScreen
 import zm.co.tbz.goldenleaf.ui.permits.GroupPermitCreateScreen
 import zm.co.tbz.goldenleaf.ui.permits.GroupPermitDetailScreen
@@ -204,6 +207,7 @@ fun TbzNavHost(
                 onPortalList = { navController.navigate(Routes.INSPECTION_PORTAL_LIST) },
                 onReports = { navController.navigate(Routes.INSPECTION_REPORTS) },
                 onHighRisk = { navController.navigate(Routes.INSPECTION_HIGH_RISK) },
+                onLookup = { navController.navigate(Routes.INSPECTION_LOOKUP) },
             )
         }
         composable(Routes.INSPECTION_SCHEDULE) {
@@ -240,7 +244,12 @@ fun TbzNavHost(
             HighRiskGrowersScreen()
         }
         composable(Routes.INSPECTION_LOOKUP) {
-            StaticContentScreen("Inspection Lookup", "Search growers for inspection scheduling.")
+            InspectionLookupScreen(
+                onOpenGrower = { navController.navigate(Routes.registrationDetail(it)) },
+                onScheduleForGrower = {
+                    navController.navigate(Routes.INSPECTION_SCHEDULE)
+                },
+            )
         }
         composable(
             route = Routes.INSPECTION_FIELD,
@@ -372,9 +381,13 @@ fun TbzNavHost(
                 onDone = { navController.popBackStack() },
             )
         }
-        composable(Routes.ARBITRATION) { ArbitrationScreen() }
+        composable(Routes.ARBITRATION) {
+            ArbitrationScreen(onSubmitted = { navController.popBackStack() })
+        }
         composable(Routes.RENEWAL) {
-            StaticContentScreen("Renewal", "Grower renewal workflow.")
+            RenewalScreen(
+                onOpenCropAllocation = { navController.navigate(Routes.registrationCrop(it)) },
+            )
         }
         composable(
             route = Routes.PLACEHOLDER,
@@ -392,16 +405,16 @@ fun TbzNavHost(
             })
         }
         composable(Routes.ABOUT) {
-            StaticContentScreen("About App", "TBZ Golden Leaf — Tobacco Registration, Marketing & Compliance field app.")
+            StaticContentScreen("About App", AppStaticContent.ABOUT)
         }
         composable(Routes.TERMS) {
-            StaticContentScreen("Terms & Conditions", "Terms content loaded from TBZ policy.")
+            StaticContentScreen("Terms & Conditions", AppStaticContent.TERMS)
         }
         composable(Routes.PRIVACY) {
-            StaticContentScreen("Privacy Policy", "Privacy policy content.")
+            StaticContentScreen("Privacy Policy", AppStaticContent.PRIVACY)
         }
         composable(Routes.GUIDELINES) {
-            StaticContentScreen("TBZ Guidelines", "Regulatory guidance for field officers.")
+            StaticContentScreen("TBZ Guidelines", AppStaticContent.GUIDELINES)
         }
     }
 }
@@ -464,6 +477,7 @@ private fun MainShell(
                     onMarketing = { navController.navigate(Routes.MARKETING) },
                     onPermits = { navController.navigate(Routes.PERMITS) },
                     onArbitration = { navController.navigate(Routes.ARBITRATION) },
+                    onRenewal = { navController.navigate(Routes.RENEWAL) },
                     onNotifications = { navController.navigate(Routes.NOTIFICATIONS) },
                     onSyncSettings = { navController.navigate(Routes.SYNC_SETTINGS) },
                     canRegistration = menuAccess.canRegistration,

@@ -62,6 +62,7 @@ fun InspectionHubScreen(
     onPortalList: () -> Unit,
     onReports: () -> Unit,
     onHighRisk: () -> Unit,
+    onLookup: () -> Unit = {},
     viewModel: InspectionViewModel = hiltViewModel(),
 ) {
     val stats by viewModel.hubStats.collectAsState()
@@ -91,6 +92,7 @@ fun InspectionHubScreen(
             ModuleHubCard("Portal inspections", "Cached server inspections", onPortalList)
             ModuleHubCard("Conducted reports", "Field, nursery, curing, validation queue", onReports)
             ModuleHubCard("High-risk growers", "Validations with risk score ≥ 70", onHighRisk)
+            ModuleHubCard("Grower lookup", "Search cached growers for scheduling", onLookup)
         }
     }
 }
@@ -885,4 +887,44 @@ private fun InspectionReportRow(
 private fun rememberReportTimestamp(createdAt: Long): String {
     val formatter = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
     return formatter.format(Date(createdAt))
+}
+
+@Composable
+fun InspectionLookupScreen(
+    onOpenGrower: (String) -> Unit,
+    onScheduleForGrower: (String) -> Unit,
+    viewModel: InspectionViewModel = hiltViewModel(),
+) {
+    val uiState by viewModel.uiState.collectAsState()
+    val results by viewModel.growerSearchResults.collectAsState()
+
+    Scaffold(topBar = { TbzTopBar("Inspection lookup") }) { padding ->
+        Column(Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
+            OutlinedTextField(
+                value = uiState.searchQuery,
+                onValueChange = viewModel::onSearchChange,
+                label = { Text("Search grower name, TBZ ID, NRC") },
+                modifier = Modifier.fillMaxWidth(),
+            )
+            LazyColumn(
+                modifier = Modifier.fillMaxSize().padding(top = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                items(results, key = { it.local_id }) { grower ->
+                    Card(Modifier.fillMaxWidth().clickable { onOpenGrower(grower.local_id) }) {
+                        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text("${grower.first_name} ${grower.last_name}", fontWeight = FontWeight.SemiBold)
+                            grower.tbz_id?.let { Text("TBZ: $it") }
+                            Text("NRC: ${grower.nrc_number}")
+                            Text("${grower.province.orEmpty()} / ${grower.district.orEmpty()}")
+                            Text("Status: ${grower.status}")
+                            Button(onClick = { onScheduleForGrower(grower.local_id) }) {
+                                Text("Schedule inspection")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }

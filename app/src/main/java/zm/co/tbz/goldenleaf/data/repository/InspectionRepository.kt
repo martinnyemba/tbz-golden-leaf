@@ -98,6 +98,30 @@ class InspectionRepository @Inject constructor(
 
     suspend fun triggerSync() = syncCoordinator.scheduleUpload()
 
+    suspend fun submitArbitration(
+        baleId: String,
+        arbitrationDate: String,
+        isRejected: Boolean,
+        rejectionReason: String?,
+        inspectorRemarks: String,
+        isFinal: Boolean = false,
+    ): String {
+        val localId = UUID.randomUUID().toString()
+        val payload = buildJsonObject {
+            put("bale_id", baleId.trim())
+            put("arbitration_date", arbitrationDate)
+            put("is_rejected", isRejected)
+            if (isRejected && !rejectionReason.isNullOrBlank()) {
+                put("rejection_reason", rejectionReason)
+            }
+            if (inspectorRemarks.isNotBlank()) put("inspector_remarks", inspectorRemarks.trim())
+            put("is_final", isFinal)
+        }
+        val payloadJson = json.encodeToString(payload)
+        enqueue(localId, "POST", "inspectorate/arbitrations/", payloadJson)
+        return localId
+    }
+
     private suspend fun enqueue(localId: String, operation: String, endpoint: String, payloadJson: String) {
         syncRepository.upsertQueueItem(
             OfflineQueueEntity(

@@ -31,6 +31,7 @@ fun MenuScreen(
     onMarketing: () -> Unit,
     onPermits: () -> Unit,
     onArbitration: () -> Unit,
+    onRenewal: () -> Unit,
     onNotifications: () -> Unit,
     onSyncSettings: () -> Unit,
     canRegistration: Boolean = true,
@@ -59,6 +60,9 @@ fun MenuScreen(
             if (canArbitration) {
                 ModuleHubCard("Arbitration", "Bale arbitration submissions", onArbitration)
             }
+            if (canRegistration) {
+                ModuleHubCard("Season renewal", "Update grower crop allocation", onRenewal)
+            }
             ModuleHubCard("Notifications", "Alerts and system messages", onNotifications)
             ModuleHubCard("Sync settings", "Offline queue & manual sync", onSyncSettings)
         }
@@ -69,17 +73,7 @@ fun MenuScreen(
 fun InspectionHubScreen() {
     Scaffold(topBar = { TbzTopBar("Inspection") }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
-            Text("Inspection schedules, field reports, nursery/curing forms, and validation.")
-            Text("Routes: /inspection/* — scaffold ready for full form implementation.")
-        }
-    }
-}
-
-@Composable
-fun ArbitrationScreen() {
-    Scaffold(topBar = { TbzTopBar("Arbitration") }) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
-            Text("Arbitration submission for bale disputes.")
+            Text("Use the Inspection module from the main menu.")
         }
     }
 }
