@@ -1,15 +1,108 @@
-*.iml
-.gradle
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
-.DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
+# Built application files
+*.apk
+*.aar
+*.ap_
+*.aab
+
+# Files for the ART/Dalvik VM
+*.dex
+
+# Java class files
+*.class
+
+# Generated files
+bin/
+gen/
+out/
+release/
+
+# Gradle
+.gradle/
+build/
+**/build/
+
+# Local configuration (SDK path, machine-specific)
 local.properties
+
+# IntelliJ / Android Studio
+*.iml
+.idea/
+!.idea/codeStyles/
+!.idea/inspectionProfiles/
+!.idea/runConfigurations.xml
+!.idea/scopes/
+!.idea/vcs.xml
+!.idea/dictionaries/
+!.idea/copyright/
+
+# Android Studio Navigation editor temp files
+.navigation/
+
+# Keystore files — never commit signing keys
+*.jks
+*.keystore
+keystore.properties
+signing.properties
+
+# External native build folder generated in Android Studio 2.2+
+.externalNativeBuild/
+.cxx/
+
+# Google Services (e.g. APIs or Firebase) — add back with ! if you commit a template
+google-services.json
+
+# Freeline
+freeline.py
+freeline/
+freeline_project_description.json
+
+# fastlane
+fastlane/report.xml
+fastlane/Readme.md
+fastlane/test_output/
+fastlane/screenshots/
+
+# Version control
+vcs.xml
+
+# lint
+lint/intermediates/
+lint/generated/
+lint/outputs/
+lint/tmp/
+
+# Android Profiling
+*.hprof
+
+# Log files
+*.log
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Kotlin
+.kotlin/
+
+# KSP / annotation processing caches
+**/kspCaches/
+**/generated/
+
+# Captures (screenshots from Android Studio)
+/captures
+captures/
+
+# Secrets and env
+.env
+.env.*
+*.env
+
+# Backup files
+*~
+*.swp
+*.bak

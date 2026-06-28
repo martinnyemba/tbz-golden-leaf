@@ -27,5 +27,5 @@ interface PermitDao {
     suspend fun upsertPermitRequest(request: PermitRequestEntity)
 
     @Delete
-    suspend fun deletePermitRequest(request: PermitRequestEntity)
+    suspend fun deletePermitRequest(request: PermitRequestEntity): Int
 }

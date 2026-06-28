@@ -26,9 +26,9 @@ data class SyncBulkResponse(
 @Serializable
 data class SyncItemResultDto(
     val client_id: String,
-    val status: Int,
-    val server_id: String? = null,
+    val status: String,
+    val http_status: Int = 0,
     val server_data: JsonElement? = null,
     val error: String? = null,
-    val replay: Boolean = false
+    val replay: Boolean = false,
 )

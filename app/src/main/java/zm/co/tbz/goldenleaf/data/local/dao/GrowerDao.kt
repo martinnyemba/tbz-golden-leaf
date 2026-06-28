@@ -14,6 +14,15 @@ interface GrowerDao {
     @Query("SELECT * FROM growers WHERE local_id = :localId")
     fun observeGrowerById(localId: String): Flow<GrowerEntity?>
 
+    @Query("SELECT * FROM growers WHERE local_id = :localId")
+    suspend fun getGrowerById(localId: String): GrowerEntity?
+
+    @Query("SELECT * FROM grower_registrations WHERE local_id = :localId")
+    suspend fun getRegistrationById(localId: String): GrowerRegistrationEntity?
+
+    @Query("SELECT * FROM grower_registrations WHERE local_id = :localId")
+    fun observeRegistrationById(localId: String): Flow<GrowerRegistrationEntity?>
+
     @Upsert
     suspend fun upsertGrower(grower: GrowerEntity)
 
@@ -27,7 +36,10 @@ interface GrowerDao {
     suspend fun upsertRegistration(registration: GrowerRegistrationEntity)
 
     @Delete
-    suspend fun deleteRegistration(registration: GrowerRegistrationEntity)
+    suspend fun deleteRegistration(registration: GrowerRegistrationEntity): Int
+
+    @Query("SELECT * FROM grower_edits WHERE local_id = :localId")
+    suspend fun getEditById(localId: String): GrowerEditEntity?
 
     @Query("SELECT * FROM grower_edits ORDER BY created_at DESC")
     fun observeEdits(): Flow<List<GrowerEditEntity>>
@@ -36,5 +48,5 @@ interface GrowerDao {
     suspend fun upsertEdit(edit: GrowerEditEntity)
 
     @Delete
-    suspend fun deleteEdit(edit: GrowerEditEntity)
+    suspend fun deleteEdit(edit: GrowerEditEntity): Int
 }

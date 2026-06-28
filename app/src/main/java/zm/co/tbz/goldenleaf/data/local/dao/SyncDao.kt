@@ -23,8 +23,11 @@ interface SyncDao {
     suspend fun upsertQueueItem(item: OfflineQueueEntity)
 
     @Query("UPDATE offline_queue SET sync_status = :status, last_sync_error = :error WHERE local_id = :localId")
-    suspend fun updateStatus(localId: String, status: String, error: String? = null)
+    suspend fun updateStatus(localId: String, status: String, error: String?): Int
 
     @Delete
-    suspend fun deleteQueueItem(item: OfflineQueueEntity)
+    suspend fun deleteQueueItem(item: OfflineQueueEntity): Int
+
+    @Query("SELECT COUNT(*) FROM offline_queue WHERE sync_status = 'pending'")
+    suspend fun pendingCount(): Int
 }

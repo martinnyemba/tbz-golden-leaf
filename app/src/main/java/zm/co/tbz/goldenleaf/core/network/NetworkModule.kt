@@ -24,13 +24,12 @@ object NetworkModule {
         ignoreUnknownKeys = true
         coerceInputValues = true
         encodeDefaults = true
+        isLenient = true
     }
 
     @Provides
     @Singleton
-    fun provideOkHttpClient(
-        authInterceptor: AuthInterceptor
-    ): OkHttpClient {
+    fun provideOkHttpClient(authInterceptor: AuthInterceptor): OkHttpClient {
         val loggingInterceptor = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
         }
@@ -42,16 +41,10 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideTrmcsApi(
-        okHttpClient: OkHttpClient,
-        json: Json
-    ): TrmcsApi {
-        // portalBaseUrl should come from DataStore/Settings.
-        // For now using a placeholder.
-        val baseUrl = "https://tbz-portal.example.com/api/v1/"
-
+    fun provideTrmcsApi(okHttpClient: OkHttpClient, json: Json): TrmcsApi {
+        // Host/path rewritten at runtime by AuthInterceptor via PortalSettings.
         return Retrofit.Builder()
-            .baseUrl(baseUrl)
+            .baseUrl("http://placeholder.invalid/api/v1/")
             .client(okHttpClient)
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()

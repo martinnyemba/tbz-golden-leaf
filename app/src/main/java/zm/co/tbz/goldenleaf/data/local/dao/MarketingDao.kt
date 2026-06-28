@@ -20,5 +20,5 @@ interface MarketingDao {
     suspend fun upsertPendingSale(sale: PendingSaleEntity)
 
     @Delete
-    suspend fun deletePendingSale(sale: PendingSaleEntity)
+    suspend fun deletePendingSale(sale: PendingSaleEntity): Int
 }

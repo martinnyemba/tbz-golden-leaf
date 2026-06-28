@@ -17,7 +17,7 @@ interface UtilityDao {
     suspend fun upsertNotifications(notifications: List<NotificationEntity>)
 
     @Query("UPDATE notifications SET is_read = 1 WHERE id = :id")
-    suspend fun markAsRead(id: String)
+    suspend fun markAsRead(id: String): Int
 
     @Query("SELECT * FROM sync_audit ORDER BY started_at DESC")
     fun observeSyncAudit(): Flow<List<SyncAuditEntity>>
@@ -26,5 +26,5 @@ interface UtilityDao {
     suspend fun insertSyncAudit(audit: SyncAuditEntity): Long
 
     @Update
-    suspend fun updateSyncAudit(audit: SyncAuditEntity)
+    suspend fun updateSyncAudit(audit: SyncAuditEntity): Int
 }

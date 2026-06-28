@@ -3,6 +3,7 @@ package zm.co.tbz.goldenleaf.data.repository
 import kotlinx.coroutines.flow.Flow
 import zm.co.tbz.goldenleaf.data.local.dao.SyncDao
 import zm.co.tbz.goldenleaf.data.local.entity.OfflineQueueEntity
+import zm.co.tbz.goldenleaf.data.local.entity.SyncCursorEntity
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -20,4 +21,10 @@ class SyncRepository @Inject constructor(
         syncDao.updateStatus(localId, status, error)
 
     suspend fun deleteQueueItem(item: OfflineQueueEntity) = syncDao.deleteQueueItem(item)
+
+    suspend fun getCursor(entityType: String): SyncCursorEntity? = syncDao.getCursor(entityType)
+
+    suspend fun upsertCursor(cursor: SyncCursorEntity) = syncDao.upsertCursor(cursor)
+
+    suspend fun pendingCount(): Int = syncDao.pendingCount()
 }

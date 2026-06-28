@@ -21,7 +21,7 @@ interface InspectionDao {
     suspend fun upsertReport(report: InspectionReportEntity)
 
     @Delete
-    suspend fun deleteReport(report: InspectionReportEntity)
+    suspend fun deleteReport(report: InspectionReportEntity): Int
 
     @Query("SELECT * FROM validations ORDER BY updated_at_local DESC")
     fun observeValidations(): Flow<List<ValidationEntity>>
