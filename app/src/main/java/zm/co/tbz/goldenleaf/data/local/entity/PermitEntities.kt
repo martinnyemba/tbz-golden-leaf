@@ -15,7 +15,7 @@ data class TransportPermitEntity(
     val conflict_category: String? = null,
 
     val permit_number: String? = null,
-    val grower_id: String, // local_id of grower
+    val grower_id: String,
     val grower_name: String? = null,
     val total_bales: Int,
     val total_weight_kg: Double,
@@ -27,7 +27,10 @@ data class TransportPermitEntity(
     val status: String,
     val valid_from: String? = null,
     val valid_to: String? = null,
-    val qr_token: String? = null
+    val qr_token: String? = null,
+    val correction_reason: String? = null,
+    val rejection_reason: String? = null,
+    val comments: String? = null,
 )
 
 @Entity(tableName = "group_permits")
@@ -43,18 +46,46 @@ data class GroupPermitEntity(
 
     val permit_number: String? = null,
     val license_plate: String,
+    val origin_province: String = "",
+    val origin_district: String = "",
     val destination_sales_floor: String,
+    val purpose: String = "",
     val status: String,
     val entry_count: Int,
     val total_bales: Int,
     val total_weight_kg: Double,
-    val qr_token: String? = null
+    val valid_from: String? = null,
+    val valid_to: String? = null,
+    val qr_token: String? = null,
+    val correction_reason: String? = null,
+    val rejection_reason: String? = null,
+    val comments: String? = null,
+    val entries_json: String? = null,
 )
+
+@Entity(tableName = "group_permit_drafts")
+data class GroupPermitDraftEntity(
+    @PrimaryKey val local_id: String,
+    val remote_id: String? = null,
+    val sync_status: String,
+    val header_json: String,
+    val entries_json: String,
+    val phase: String = PHASE_DRAFT,
+    val created_at: Long = System.currentTimeMillis(),
+    val last_sync_error: String? = null,
+) {
+    companion object {
+        const val PHASE_DRAFT = "draft"
+        const val PHASE_HEADER_QUEUED = "header_queued"
+        const val PHASE_ENTRIES_QUEUED = "entries_queued"
+        const val PHASE_DONE = "done"
+    }
+}
 
 @Entity(tableName = "permit_requests")
 data class PermitRequestEntity(
     @PrimaryKey val local_id: String,
     val sync_status: String = "pending",
     val data_json: String,
-    val created_at: Long = System.currentTimeMillis()
+    val created_at: Long = System.currentTimeMillis(),
 )

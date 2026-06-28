@@ -54,6 +54,7 @@ class ProfileViewModel @Inject constructor(
 fun ProfileScreen(
     onChangePassword: () -> Unit,
     onAbout: () -> Unit,
+    onNotifications: () -> Unit = {},
     onSyncSettings: () -> Unit,
     onLogout: () -> Unit,
     viewModel: ProfileViewModel = hiltViewModel(),
@@ -75,6 +76,9 @@ fun ProfileScreen(
             )
             OutlinedButton(onClick = onChangePassword, modifier = Modifier.fillMaxWidth()) {
                 Text("Change Password")
+            }
+            OutlinedButton(onClick = onNotifications, modifier = Modifier.fillMaxWidth()) {
+                Text("Notifications")
             }
             OutlinedButton(onClick = onAbout, modifier = Modifier.fillMaxWidth()) { Text("About App") }
             OutlinedButton(onClick = onSyncSettings, modifier = Modifier.fillMaxWidth()) {

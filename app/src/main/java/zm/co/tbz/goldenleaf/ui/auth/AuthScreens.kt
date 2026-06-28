@@ -1,5 +1,7 @@
 package zm.co.tbz.goldenleaf.ui.auth
 
+import android.net.Uri
+import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -19,17 +21,22 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import zm.co.tbz.goldenleaf.R
+import zm.co.tbz.goldenleaf.data.local.preferences.AppPreferences
+import zm.co.tbz.goldenleaf.data.local.preferences.UserPreferences
 import zm.co.tbz.goldenleaf.ui.components.ErrorText
 import zm.co.tbz.goldenleaf.ui.components.LoadingBox
 import zm.co.tbz.goldenleaf.ui.components.TbzTopBar
@@ -74,6 +81,7 @@ fun OnboardingScreen(onFinished: () -> Unit) {
 fun PortalLoginScreen(
     onLoginSuccess: () -> Unit,
     onNeedsOtp: () -> Unit,
+    onForgotPassword: () -> Unit = {},
     viewModel: LoginViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
@@ -126,6 +134,9 @@ fun PortalLoginScreen(
                 enabled = !state.isLoading,
                 modifier = Modifier.fillMaxWidth(),
             ) { Text("Sign In") }
+            TextButton(onClick = onForgotPassword, modifier = Modifier.fillMaxWidth()) {
+                Text("Forgot password?")
+            }
             OutlinedButton(onClick = viewModel::toggleApiSettings, modifier = Modifier.fillMaxWidth()) {
                 Text("API Settings")
             }
@@ -154,6 +165,36 @@ fun PortalLoginScreen(
                 TextButton(onClick = viewModel::testConnection) { Text("Test") }
             },
         )
+    }
+}
+
+@Composable
+fun ForgotPasswordScreen(
+    onBack: () -> Unit,
+    userPreferences: UserPreferences,
+) {
+    val context = LocalContext.current
+    val prefs by userPreferences.preferences.collectAsStateWithLifecycle(initialValue = AppPreferences())
+
+    LaunchedEffect(prefs.portalBaseUrl) {
+        val portalUrl = UserPreferences.normalizePortalUrl(prefs.portalBaseUrl)
+        val forgotUrl = "$portalUrl/accounts/forgot-password/"
+        CustomTabsIntent.Builder().build().launchUrl(context, Uri.parse(forgotUrl))
+    }
+
+    Scaffold(topBar = { TbzTopBar("Forgot Password") }) { padding ->
+        Column(
+            Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text("Opening the TBZ portal password reset page in your browser.")
+            OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) {
+                Text("Back to Sign In")
+            }
+        }
     }
 }
 

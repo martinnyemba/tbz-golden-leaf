@@ -64,6 +64,13 @@ interface TrmcsApi {
         @Query("updated_after") updatedAfter: String? = null
     ): PagedResponse<TransportPermitDto>
 
+    @GET("permits/group-permits/")
+    suspend fun getGroupPermits(
+        @Query("search") search: String? = null,
+        @Query("status") status: String? = null,
+        @Query("updated_after") updatedAfter: String? = null
+    ): PagedResponse<GroupPermitDto>
+
     @GET("inspectorate/inspections/")
     suspend fun getInspections(
         @Query("search") search: String? = null,
@@ -75,6 +82,21 @@ interface TrmcsApi {
     // --- Marketing ---
     @POST("permits/verify-qr/")
     suspend fun verifyQr(@Body body: VerifyQrRequest): VerifyQrResponse
+
+    @POST("permits/group-permits/validate-qr/")
+    suspend fun validateGroupPermitQr(@Body body: GroupPermitValidateRequest): GroupPermitValidateResponse
+
+    @POST("permits/group-permits/")
+    suspend fun createGroupPermit(@Body body: kotlinx.serialization.json.JsonObject): GroupPermitCreatedResponse
+
+    @POST("permits/group-permits/{id}/entries/")
+    suspend fun addGroupPermitEntry(
+        @Path("id") groupId: String,
+        @Body body: kotlinx.serialization.json.JsonObject,
+    ): GroupPermitEntryDto
+
+    @POST("permits/group-permits/{id}/submit/")
+    suspend fun submitGroupPermit(@Path("id") groupId: String): GroupPermitDto
 
     @POST("marketing/bales/bulk-create/")
     suspend fun bulkCreateBales(@Body body: BulkBaleCreateRequest): Unit

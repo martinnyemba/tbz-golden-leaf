@@ -21,8 +21,8 @@ object AppModule {
         return Room.databaseBuilder(
             context,
             TrmsDatabase::class.java,
-            "trms_db"
-        ).build()
+            "trms_db",
+        ).fallbackToDestructiveMigration().build()
     }
 
     @Provides

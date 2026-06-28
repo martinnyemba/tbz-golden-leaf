@@ -13,32 +13,58 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import kotlinx.coroutines.launch
 import zm.co.tbz.goldenleaf.data.local.preferences.UserPreferences
 import zm.co.tbz.goldenleaf.ui.auth.ChangePasswordScreen
+import zm.co.tbz.goldenleaf.ui.auth.ForgotPasswordScreen
 import zm.co.tbz.goldenleaf.ui.auth.Login2FAScreen
 import zm.co.tbz.goldenleaf.ui.auth.OnboardingScreen
 import zm.co.tbz.goldenleaf.ui.auth.PortalLoginScreen
 import zm.co.tbz.goldenleaf.ui.home.DashboardScreen
+import zm.co.tbz.goldenleaf.ui.inspection.CuringInspectionFormScreen
+import zm.co.tbz.goldenleaf.ui.inspection.FieldInspectionFormScreen
+import zm.co.tbz.goldenleaf.ui.inspection.HighRiskGrowersScreen
+import zm.co.tbz.goldenleaf.ui.inspection.InspectionDetailScreen
+import zm.co.tbz.goldenleaf.ui.inspection.InspectionHubScreen
+import zm.co.tbz.goldenleaf.ui.inspection.InspectionPortalListScreen
+import zm.co.tbz.goldenleaf.ui.inspection.InspectionReportsScreen
+import zm.co.tbz.goldenleaf.ui.inspection.LocalSchedulesScreen
+import zm.co.tbz.goldenleaf.ui.inspection.NurseryInspectionFormScreen
+import zm.co.tbz.goldenleaf.ui.inspection.ScheduleInspectionScreen
+import zm.co.tbz.goldenleaf.ui.inspection.ValidationFormScreen
+import zm.co.tbz.goldenleaf.ui.marketing.EditPendingSaleScreen
+import zm.co.tbz.goldenleaf.ui.marketing.MarketingHubScreen
+import zm.co.tbz.goldenleaf.ui.marketing.PendingSalesScreen
+import zm.co.tbz.goldenleaf.ui.marketing.SalesCaptureScreen
 import zm.co.tbz.goldenleaf.ui.modules.ArbitrationScreen
-import zm.co.tbz.goldenleaf.ui.modules.InspectionHubScreen
-import zm.co.tbz.goldenleaf.ui.modules.MarketingHubScreen
 import zm.co.tbz.goldenleaf.ui.modules.MenuScreen
-import zm.co.tbz.goldenleaf.ui.modules.PermitsHubScreen
 import zm.co.tbz.goldenleaf.ui.modules.SearchScreen
 import zm.co.tbz.goldenleaf.ui.modules.StaticContentScreen
+import zm.co.tbz.goldenleaf.ui.permits.GroupPermitCorrectionScreen
+import zm.co.tbz.goldenleaf.ui.permits.GroupPermitCreateScreen
+import zm.co.tbz.goldenleaf.ui.permits.GroupPermitDetailScreen
+import zm.co.tbz.goldenleaf.ui.permits.GroupPermitHubScreen
+import zm.co.tbz.goldenleaf.ui.permits.GroupPermitStatusListScreen
+import zm.co.tbz.goldenleaf.ui.permits.GroupPermitValidateScreen
+import zm.co.tbz.goldenleaf.ui.permits.PermitDetailScreen
+import zm.co.tbz.goldenleaf.ui.permits.PermitListScreen
+import zm.co.tbz.goldenleaf.ui.permits.PermitRequestScreen
+import zm.co.tbz.goldenleaf.ui.permits.PermitValidateScreen
+import zm.co.tbz.goldenleaf.ui.permits.PermitsHubScreen
+import zm.co.tbz.goldenleaf.ui.notifications.NotificationsScreen
 import zm.co.tbz.goldenleaf.ui.profile.ProfileScreen
 import zm.co.tbz.goldenleaf.ui.registration.CorrectionsScreen
 import zm.co.tbz.goldenleaf.ui.registration.CropAllocationScreen
@@ -79,6 +105,13 @@ fun TbzNavHost(
                     }
                 },
                 onNeedsOtp = { navController.navigate(Routes.LOGIN_2FA) },
+                onForgotPassword = { navController.navigate(Routes.FORGOT_PASSWORD) },
+            )
+        }
+        composable(Routes.FORGOT_PASSWORD) {
+            ForgotPasswordScreen(
+                onBack = { navController.popBackStack() },
+                userPreferences = userPreferences,
             )
         }
         composable(Routes.LOGIN_2FA) {
@@ -91,7 +124,10 @@ fun TbzNavHost(
             )
         }
         composable(Routes.MAIN) {
-            MainShell(navController = navController, userPreferences = userPreferences)
+            MainShell(navController = navController)
+        }
+        composable(Routes.NOTIFICATIONS) {
+            NotificationsScreen()
         }
         composable(Routes.REGISTRATION) {
             RegistrationHubScreen(
@@ -156,10 +192,179 @@ fun TbzNavHost(
         composable(Routes.CORRECTIONS) {
             CorrectionsScreen(onOpenCorrection = { navController.navigate(Routes.registrationCorrection(it)) })
         }
-        composable(Routes.INSPECTION) { InspectionHubScreen() }
-        composable(Routes.MARKETING) { MarketingHubScreen() }
-        composable(Routes.PERMITS) { PermitsHubScreen() }
+        composable(Routes.INSPECTION) {
+            InspectionHubScreen(
+                onSchedule = { navController.navigate(Routes.INSPECTION_SCHEDULE) },
+                onLocalSchedules = { navController.navigate(Routes.INSPECTION_SCHEDULES_LOCAL) },
+                onPortalList = { navController.navigate(Routes.INSPECTION_PORTAL_LIST) },
+                onReports = { navController.navigate(Routes.INSPECTION_REPORTS) },
+                onHighRisk = { navController.navigate(Routes.INSPECTION_HIGH_RISK) },
+            )
+        }
+        composable(Routes.INSPECTION_SCHEDULE) {
+            ScheduleInspectionScreen(onScheduled = { navController.popBackStack() })
+        }
+        composable(Routes.INSPECTION_SCHEDULES_LOCAL) {
+            LocalSchedulesScreen(
+                onOpenDetail = { navController.navigate(Routes.inspectionDetail(it)) },
+            )
+        }
+        composable(
+            route = Routes.INSPECTION_DETAIL,
+            arguments = listOf(navArgument("localId") { type = NavType.StringType }),
+        ) { entry ->
+            val localId = entry.arguments?.getString("localId").orEmpty()
+            InspectionDetailScreen(
+                localId = localId,
+                onStartField = { navController.navigate(Routes.inspectionField(it)) },
+                onStartNursery = { navController.navigate(Routes.inspectionNursery(it)) },
+                onStartCuring = { navController.navigate(Routes.inspectionCuring(it)) },
+                onStartValidation = { navController.navigate(Routes.validation(it)) },
+                onOpenGrower = { navController.navigate(Routes.registrationDetail(it)) },
+            )
+        }
+        composable(Routes.INSPECTION_PORTAL_LIST) {
+            InspectionPortalListScreen(
+                onOpenDetail = { navController.navigate(Routes.inspectionDetail(it)) },
+            )
+        }
+        composable(Routes.INSPECTION_REPORTS) {
+            InspectionReportsScreen()
+        }
+        composable(Routes.INSPECTION_HIGH_RISK) {
+            HighRiskGrowersScreen()
+        }
+        composable(Routes.INSPECTION_LOOKUP) {
+            StaticContentScreen("Inspection Lookup", "Search growers for inspection scheduling.")
+        }
+        composable(
+            route = Routes.INSPECTION_FIELD,
+            arguments = listOf(navArgument("inspectionId") { type = NavType.StringType }),
+        ) { entry ->
+            FieldInspectionFormScreen(
+                inspectionId = entry.arguments?.getString("inspectionId").orEmpty(),
+                onSaved = { navController.popBackStack() },
+            )
+        }
+        composable(
+            route = Routes.INSPECTION_NURSERY,
+            arguments = listOf(navArgument("inspectionId") { type = NavType.StringType }),
+        ) { entry ->
+            NurseryInspectionFormScreen(
+                inspectionId = entry.arguments?.getString("inspectionId").orEmpty(),
+                onSaved = { navController.popBackStack() },
+            )
+        }
+        composable(
+            route = Routes.INSPECTION_CURING,
+            arguments = listOf(navArgument("inspectionId") { type = NavType.StringType }),
+        ) { entry ->
+            CuringInspectionFormScreen(
+                inspectionId = entry.arguments?.getString("inspectionId").orEmpty(),
+                onSaved = { navController.popBackStack() },
+            )
+        }
+        composable(
+            route = Routes.VALIDATION,
+            arguments = listOf(navArgument("inspectionId") { type = NavType.StringType }),
+        ) { entry ->
+            ValidationFormScreen(
+                inspectionId = entry.arguments?.getString("inspectionId").orEmpty(),
+                onSaved = { navController.popBackStack() },
+            )
+        }
+        composable(Routes.MARKETING) {
+            MarketingHubScreen(
+                onSalesCapture = { navController.navigate(Routes.SALES) },
+                onPendingSales = { navController.navigate(Routes.PENDING_SALES) },
+            )
+        }
+        composable(Routes.SALES) {
+            SalesCaptureScreen(onDone = { navController.popBackStack() })
+        }
+        composable(Routes.PENDING_SALES) {
+            PendingSalesScreen(
+                onEdit = { navController.navigate(Routes.editPendingSale(it)) },
+            )
+        }
+        composable(
+            route = Routes.EDIT_PENDING_SALE,
+            arguments = listOf(navArgument("localId") { type = NavType.StringType }),
+        ) { entry ->
+            EditPendingSaleScreen(
+                localId = entry.arguments?.getString("localId").orEmpty(),
+                onSaved = { navController.popBackStack() },
+            )
+        }
+        composable(Routes.PERMITS) {
+            PermitsHubScreen(
+                onRequest = { navController.navigate(Routes.PERMIT_REQUEST) },
+                onValidate = { navController.navigate(Routes.PERMIT_VALIDATE) },
+                onList = { navController.navigate(Routes.PERMIT_LIST) },
+                onGroupPermits = { navController.navigate(Routes.PERMIT_GROUP) },
+            )
+        }
+        composable(Routes.PERMIT_REQUEST) {
+            PermitRequestScreen(onSubmitted = { navController.popBackStack() })
+        }
+        composable(Routes.PERMIT_VALIDATE) { PermitValidateScreen() }
+        composable(Routes.PERMIT_LIST) {
+            PermitListScreen(onOpenDetail = { navController.navigate(Routes.permitDetail(it)) })
+        }
+        composable(
+            route = Routes.PERMIT_DETAIL,
+            arguments = listOf(navArgument("localId") { type = NavType.StringType }),
+        ) { entry ->
+            PermitDetailScreen(localId = entry.arguments?.getString("localId").orEmpty())
+        }
+        composable(Routes.PERMIT_GROUP) {
+            GroupPermitHubScreen(
+                onCreate = { navController.navigate(Routes.PERMIT_GROUP_CREATE) },
+                onValidate = { navController.navigate(Routes.PERMIT_GROUP_VALIDATE) },
+                onStatusList = { navController.navigate(Routes.PERMIT_GROUP_STATUS) },
+            )
+        }
+        composable(Routes.PERMIT_GROUP_CREATE) {
+            GroupPermitCreateScreen(onSubmitted = { navController.popBackStack() })
+        }
+        composable(Routes.PERMIT_GROUP_VALIDATE) {
+            GroupPermitValidateScreen()
+        }
+        composable(Routes.PERMIT_GROUP_STATUS) {
+            GroupPermitStatusListScreen(
+                onOpenDetail = { navController.navigate(Routes.groupPermitDetail(it)) },
+            )
+        }
+        composable(
+            route = Routes.PERMIT_GROUP_DETAIL,
+            arguments = listOf(navArgument("localId") { type = NavType.StringType }),
+        ) { entry ->
+            val localId = entry.arguments?.getString("localId").orEmpty()
+            GroupPermitDetailScreen(
+                localId = localId,
+                onOpenCorrection = { navController.navigate(Routes.groupPermitCorrection(it)) },
+            )
+        }
+        composable(
+            route = Routes.PERMIT_GROUP_CORRECTION,
+            arguments = listOf(navArgument("localId") { type = NavType.StringType }),
+        ) { entry ->
+            GroupPermitCorrectionScreen(
+                localId = entry.arguments?.getString("localId").orEmpty(),
+                onDone = { navController.popBackStack() },
+            )
+        }
         composable(Routes.ARBITRATION) { ArbitrationScreen() }
+        composable(Routes.RENEWAL) {
+            StaticContentScreen("Renewal", "Grower renewal workflow.")
+        }
+        composable(
+            route = Routes.PLACEHOLDER,
+            arguments = listOf(navArgument("title") { type = NavType.StringType }),
+        ) { entry ->
+            val title = entry.arguments?.getString("title").orEmpty()
+            StaticContentScreen(title, "Feature scaffold for $title.")
+        }
         composable(Routes.SYNC_SETTINGS) { SyncSettingsScreen() }
         composable(Routes.CHANGE_PASSWORD) {
             ChangePasswordScreen(onDone = {
@@ -186,8 +391,9 @@ fun TbzNavHost(
 @Composable
 private fun MainShell(
     navController: NavHostController,
-    userPreferences: UserPreferences,
+    menuAccessViewModel: MenuAccessViewModel = hiltViewModel(),
 ) {
+    val menuAccess by menuAccessViewModel.state.collectAsState()
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
     Scaffold(
         bottomBar = {
@@ -227,27 +433,39 @@ private fun MainShell(
                 onOpenCorrections = { navController.navigate(Routes.CORRECTIONS) },
                 onOpenSync = { navController.navigate(Routes.SYNC_SETTINGS) },
             )
-            1 -> Box(contentModifier) { SearchScreen() }
+            1 -> Box(contentModifier) {
+                SearchScreen(
+                    onOpenGrower = { navController.navigate(Routes.registrationDetail(it)) },
+                    onOpenPermit = { navController.navigate(Routes.permitDetail(it)) },
+                )
+            }
             2 -> Box(contentModifier) {
                 MenuScreen(
-                onRegistration = { navController.navigate(Routes.REGISTRATION) },
-                onInspection = { navController.navigate(Routes.INSPECTION) },
-                onMarketing = { navController.navigate(Routes.MARKETING) },
-                onPermits = { navController.navigate(Routes.PERMITS) },
-                onArbitration = { navController.navigate(Routes.ARBITRATION) },
-                onSyncSettings = { navController.navigate(Routes.SYNC_SETTINGS) },
+                    onRegistration = { navController.navigate(Routes.REGISTRATION) },
+                    onInspection = { navController.navigate(Routes.INSPECTION) },
+                    onMarketing = { navController.navigate(Routes.MARKETING) },
+                    onPermits = { navController.navigate(Routes.PERMITS) },
+                    onArbitration = { navController.navigate(Routes.ARBITRATION) },
+                    onNotifications = { navController.navigate(Routes.NOTIFICATIONS) },
+                    onSyncSettings = { navController.navigate(Routes.SYNC_SETTINGS) },
+                    canRegistration = menuAccess.canRegistration,
+                    canInspection = menuAccess.canInspection,
+                    canMarketing = menuAccess.canMarketing,
+                    canPermits = menuAccess.canPermits,
+                    canArbitration = menuAccess.canArbitration,
                 )
             }
             3 -> Box(contentModifier) {
                 ProfileScreen(
-                onChangePassword = { navController.navigate(Routes.CHANGE_PASSWORD) },
-                onAbout = { navController.navigate(Routes.ABOUT) },
-                onSyncSettings = { navController.navigate(Routes.SYNC_SETTINGS) },
-                onLogout = {
-                    navController.navigate(Routes.PORTAL_LOGIN) {
-                        popUpTo(Routes.MAIN) { inclusive = true }
-                    }
-                },
+                    onChangePassword = { navController.navigate(Routes.CHANGE_PASSWORD) },
+                    onAbout = { navController.navigate(Routes.ABOUT) },
+                    onNotifications = { navController.navigate(Routes.NOTIFICATIONS) },
+                    onSyncSettings = { navController.navigate(Routes.SYNC_SETTINGS) },
+                    onLogout = {
+                        navController.navigate(Routes.PORTAL_LOGIN) {
+                            popUpTo(Routes.MAIN) { inclusive = true }
+                        }
+                    },
                 )
             }
         }

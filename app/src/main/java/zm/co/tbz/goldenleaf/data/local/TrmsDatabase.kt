@@ -21,6 +21,7 @@ import zm.co.tbz.goldenleaf.data.local.entity.*
         GrowerEditEntity::class,
         TransportPermitEntity::class,
         GroupPermitEntity::class,
+        GroupPermitDraftEntity::class,
         PermitRequestEntity::class,
         InspectionEntity::class,
         InspectionReportEntity::class,
@@ -30,7 +31,7 @@ import zm.co.tbz.goldenleaf.data.local.entity.*
         NotificationEntity::class,
         SyncAuditEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class TrmsDatabase : RoomDatabase() {

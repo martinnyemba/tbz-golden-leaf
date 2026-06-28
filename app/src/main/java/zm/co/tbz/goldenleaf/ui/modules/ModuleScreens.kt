@@ -11,15 +11,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import zm.co.tbz.goldenleaf.ui.components.ModuleHubCard
 import zm.co.tbz.goldenleaf.ui.components.TbzTopBar
+import zm.co.tbz.goldenleaf.ui.search.GlobalSearchScreen
 
 @Composable
-fun SearchScreen() {
-    Scaffold(topBar = { TbzTopBar("Search") }) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
-            Text("Global search across cached growers, permits, and inspections.")
-            Text("Coming soon: offline Room-backed search.")
-        }
-    }
+fun SearchScreen(
+    onOpenGrower: (String) -> Unit = {},
+    onOpenPermit: (String) -> Unit = {},
+) {
+    GlobalSearchScreen(
+        onOpenGrower = onOpenGrower,
+        onOpenPermit = onOpenPermit,
+    )
 }
 
 @Composable
@@ -29,18 +31,35 @@ fun MenuScreen(
     onMarketing: () -> Unit,
     onPermits: () -> Unit,
     onArbitration: () -> Unit,
+    onNotifications: () -> Unit,
     onSyncSettings: () -> Unit,
+    canRegistration: Boolean = true,
+    canInspection: Boolean = true,
+    canMarketing: Boolean = true,
+    canPermits: Boolean = true,
+    canArbitration: Boolean = true,
 ) {
     Scaffold(topBar = { TbzTopBar("More") }) { padding ->
         Column(
             Modifier.fillMaxSize().padding(padding).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            ModuleHubCard("Registration", "Grower registration & corrections", onRegistration)
-            ModuleHubCard("Inspection", "Schedules, reports, validation", onInspection)
-            ModuleHubCard("Marketing & Sales", "Bale capture & pending sales", onMarketing)
-            ModuleHubCard("Permits", "Transport & group permits", onPermits)
-            ModuleHubCard("Arbitration", "Bale arbitration submissions", onArbitration)
+            if (canRegistration) {
+                ModuleHubCard("Registration", "Grower registration & corrections", onRegistration)
+            }
+            if (canInspection) {
+                ModuleHubCard("Inspection", "Schedules, reports, validation", onInspection)
+            }
+            if (canMarketing) {
+                ModuleHubCard("Marketing & Sales", "Bale capture & pending sales", onMarketing)
+            }
+            if (canPermits) {
+                ModuleHubCard("Permits", "Transport & group permits", onPermits)
+            }
+            if (canArbitration) {
+                ModuleHubCard("Arbitration", "Bale arbitration submissions", onArbitration)
+            }
+            ModuleHubCard("Notifications", "Alerts and system messages", onNotifications)
             ModuleHubCard("Sync settings", "Offline queue & manual sync", onSyncSettings)
         }
     }
@@ -52,24 +71,6 @@ fun InspectionHubScreen() {
         Column(Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
             Text("Inspection schedules, field reports, nursery/curing forms, and validation.")
             Text("Routes: /inspection/* — scaffold ready for full form implementation.")
-        }
-    }
-}
-
-@Composable
-fun MarketingHubScreen() {
-    Scaffold(topBar = { TbzTopBar("Marketing") }) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
-            Text("Sales capture, pending sales sync, and bale barcode scanning.")
-        }
-    }
-}
-
-@Composable
-fun PermitsHubScreen() {
-    Scaffold(topBar = { TbzTopBar("Permits") }) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
-            Text("Permit requests, validation, group permits, and approval flows.")
         }
     }
 }

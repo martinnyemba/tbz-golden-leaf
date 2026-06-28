@@ -7,12 +7,15 @@ import androidx.work.WorkerParameters
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
 import zm.co.tbz.goldenleaf.data.local.preferences.UserPreferences
 import zm.co.tbz.goldenleaf.data.local.entity.SyncStatuses
 import zm.co.tbz.goldenleaf.data.remote.api.TrmcsApi
 import zm.co.tbz.goldenleaf.data.remote.dto.SyncBulkRequest
 import zm.co.tbz.goldenleaf.data.remote.dto.SyncItemDto
 import zm.co.tbz.goldenleaf.data.repository.AuthRepository
+import zm.co.tbz.goldenleaf.data.repository.PermitRepository
 import zm.co.tbz.goldenleaf.data.repository.SyncRepository
 import java.time.Instant
 import java.time.ZoneOffset
@@ -27,6 +30,7 @@ class UploadSyncWorker @AssistedInject constructor(
     private val authRepository: AuthRepository,
     private val userPreferences: UserPreferences,
     private val json: Json,
+    private val permitRepository: PermitRepository,
 ) : CoroutineWorker(context, workerParams) {
 
     override suspend fun doWork(): Result {
@@ -63,6 +67,11 @@ class UploadSyncWorker @AssistedInject constructor(
                         status = status,
                         error = result.error,
                     )
+                    if (status == SyncStatuses.SYNCED) {
+                        result.server_data?.let { serverData ->
+                            handleGroupPermitContinuation(result.client_id, serverData)
+                        }
+                    }
                 }
             } catch (_: Exception) {
                 batch.forEach { syncRepository.updateStatus(it.local_id, "pending") }
@@ -71,6 +80,12 @@ class UploadSyncWorker @AssistedInject constructor(
         }
         userPreferences.setLastSyncAt(System.currentTimeMillis())
         return Result.success()
+    }
+
+    private suspend fun handleGroupPermitContinuation(clientId: String, serverData: JsonElement) {
+        runCatching {
+            permitRepository.handleSyncServerData(clientId, json.encodeToString(JsonElement.serializer(), serverData))
+        }
     }
 
     private fun formatQueuedAt(epochMs: Long): String =

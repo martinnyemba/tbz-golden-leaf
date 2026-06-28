@@ -33,6 +33,11 @@ zm.co.tbz.goldenleaf/
     ├── auth/                     # Login, onboarding, session ViewModels
     ├── home/                     # Dashboard
     ├── registration/             # Grower registration module
+    ├── inspection/               # Schedules, forms, validation
+    ├── marketing/                # Sales capture, pending sales
+    ├── permits/                  # Transport permit request/validate
+    ├── notifications/
+    ├── search/
     │   ├── RegistrationModels.kt
     │   ├── RegistrationViewModel.kt
     │   ├── RegistrationComponents.kt

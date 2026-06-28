@@ -4,6 +4,7 @@ object Routes {
     const val SPLASH = "splash"
     const val ONBOARDING = "onboarding"
     const val PORTAL_LOGIN = "portal_login"
+    const val FORGOT_PASSWORD = "forgot_password"
     const val LOGIN_2FA = "login_2fa"
     const val MAIN = "main"
     const val HOME = "home"
@@ -17,6 +18,8 @@ object Routes {
     const val TERMS = "terms"
     const val PRIVACY = "privacy"
     const val GUIDELINES = "guidelines"
+
+    // Registration
     const val REGISTRATION = "registration"
     const val REGISTRATION_NEW = "registration/new"
     const val REGISTRATION_LIST = "registration/list"
@@ -27,9 +30,42 @@ object Routes {
     const val REGISTRATION_CROP = "registration/crop/{localId}"
     const val GROWER_UPDATES = "grower-updates"
     const val CORRECTIONS = "corrections"
+
+    // Inspection
     const val INSPECTION = "inspection"
+    const val INSPECTION_SCHEDULE = "inspection/schedule"
+    const val INSPECTION_SCHEDULES_LOCAL = "inspection/schedules-local"
+    const val INSPECTION_DETAIL = "inspection/detail/{localId}"
+    const val INSPECTION_PORTAL_LIST = "inspection/portal-list"
+    const val INSPECTION_REPORTS = "inspection/reports"
+    const val INSPECTION_HIGH_RISK = "inspection/high-risk"
+    const val INSPECTION_LOOKUP = "inspection/lookup"
+    const val INSPECTION_FIELD = "inspection/field/{inspectionId}"
+    const val INSPECTION_NURSERY = "inspection/nursery/{inspectionId}"
+    const val INSPECTION_CURING = "inspection/curing/{inspectionId}"
+    const val VALIDATION = "validation/{inspectionId}"
+
+    // Marketing
     const val MARKETING = "marketing"
+    const val SALES = "sales"
+    const val PENDING_SALES = "pending-sales"
+    const val EDIT_PENDING_SALE = "pending-sales/edit/{localId}"
+
+    // Permits
     const val PERMITS = "permits"
+    const val PERMIT_REQUEST = "permit-request"
+    const val PERMIT_VALIDATE = "permit-validate"
+    const val PERMIT_LIST = "permit-list"
+    const val PERMIT_DETAIL = "permit-detail/{localId}"
+
+    // Group permits
+    const val PERMIT_GROUP = "permit-group"
+    const val PERMIT_GROUP_CREATE = "permit-group/create"
+    const val PERMIT_GROUP_VALIDATE = "permit-group/validate"
+    const val PERMIT_GROUP_STATUS = "permit-group/status"
+    const val PERMIT_GROUP_DETAIL = "permit-group/detail/{localId}"
+    const val PERMIT_GROUP_CORRECTION = "permit-group/correction/{localId}"
+
     const val ARBITRATION = "arbitration"
     const val RENEWAL = "renewal"
     const val PLACEHOLDER = "placeholder/{title}"
@@ -38,5 +74,14 @@ object Routes {
     fun registrationEdit(localId: String) = "registration/edit/$localId"
     fun registrationCorrection(localId: String) = "registration/correction/$localId"
     fun registrationCrop(localId: String) = "registration/crop/$localId"
+    fun inspectionDetail(localId: String) = "inspection/detail/$localId"
+    fun inspectionField(inspectionId: String) = "inspection/field/$inspectionId"
+    fun inspectionNursery(inspectionId: String) = "inspection/nursery/$inspectionId"
+    fun inspectionCuring(inspectionId: String) = "inspection/curing/$inspectionId"
+    fun validation(inspectionId: String) = "validation/$inspectionId"
+    fun editPendingSale(localId: String) = "pending-sales/edit/$localId"
+    fun permitDetail(localId: String) = "permit-detail/$localId"
+    fun groupPermitDetail(localId: String) = "permit-group/detail/$localId"
+    fun groupPermitCorrection(localId: String) = "permit-group/correction/$localId"
     fun placeholder(title: String) = "placeholder/$title"
 }
