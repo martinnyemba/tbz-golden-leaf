@@ -1,27 +1,24 @@
 package zm.co.tbz.goldenleaf.ui.navigation
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
+import androidx.compose.ui.window.DialogProperties
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.dialog
 import androidx.navigation.navArgument
+import zm.co.tbz.goldenleaf.ui.home.DashboardViewModel
 import kotlinx.coroutines.launch
 import zm.co.tbz.goldenleaf.data.local.preferences.UserPreferences
 import zm.co.tbz.goldenleaf.ui.auth.ChangePasswordScreen
@@ -29,7 +26,8 @@ import zm.co.tbz.goldenleaf.ui.auth.ForgotPasswordScreen
 import zm.co.tbz.goldenleaf.ui.auth.Login2FAScreen
 import zm.co.tbz.goldenleaf.ui.auth.OnboardingScreen
 import zm.co.tbz.goldenleaf.ui.auth.PortalLoginScreen
-import zm.co.tbz.goldenleaf.ui.components.GlIcon
+import zm.co.tbz.goldenleaf.ui.components.GlBottomNav
+import zm.co.tbz.goldenleaf.ui.components.GlTab
 import zm.co.tbz.goldenleaf.ui.components.glColors
 import zm.co.tbz.goldenleaf.ui.home.DashboardScreen
 import zm.co.tbz.goldenleaf.ui.inspection.CuringInspectionFormScreen
@@ -48,10 +46,10 @@ import zm.co.tbz.goldenleaf.ui.marketing.MarketingHubScreen
 import zm.co.tbz.goldenleaf.ui.marketing.PendingSalesScreen
 import zm.co.tbz.goldenleaf.ui.marketing.SalesCaptureScreen
 import zm.co.tbz.goldenleaf.ui.arbitration.ArbitrationScreen
-import zm.co.tbz.goldenleaf.ui.modules.MenuScreen
-import zm.co.tbz.goldenleaf.ui.modules.SearchScreen
+import zm.co.tbz.goldenleaf.ui.search.GlobalSearchScreen
 import zm.co.tbz.goldenleaf.ui.content.AppStaticContent
 import zm.co.tbz.goldenleaf.ui.inspection.InspectionHubScreen
+import zm.co.tbz.goldenleaf.ui.modules.MoreOptionsSheet
 import zm.co.tbz.goldenleaf.ui.modules.StaticContentScreen
 import zm.co.tbz.goldenleaf.ui.renewal.RenewalScreen
 import zm.co.tbz.goldenleaf.ui.permits.GroupPermitCorrectionScreen
@@ -90,14 +88,24 @@ fun TbzNavHost(
     NavHost(navController = navController, startDestination = startDestination) {
         composable(Routes.ONBOARDING) {
             val scope = rememberCoroutineScope()
-            OnboardingScreen {
-                scope.launch {
-                    onFinishOnboarding()
-                    navController.navigate(Routes.PORTAL_LOGIN) {
-                        popUpTo(Routes.ONBOARDING) { inclusive = true }
+            OnboardingScreen(
+                onFinished = {
+                    scope.launch {
+                        onFinishOnboarding()
+                        navController.navigate(Routes.PORTAL_LOGIN) {
+                            popUpTo(Routes.ONBOARDING) { inclusive = true }
+                        }
                     }
-                }
-            }
+                },
+                onSkip = {
+                    scope.launch {
+                        onFinishOnboarding()
+                        navController.navigate(Routes.PORTAL_LOGIN) {
+                            popUpTo(Routes.ONBOARDING) { inclusive = true }
+                        }
+                    }
+                },
+            )
         }
         composable(Routes.PORTAL_LOGIN) {
             PortalLoginScreen(
@@ -108,6 +116,8 @@ fun TbzNavHost(
                 },
                 onNeedsOtp = { navController.navigate(Routes.LOGIN_2FA) },
                 onForgotPassword = { navController.navigate(Routes.FORGOT_PASSWORD) },
+                onTerms = { navController.navigate(Routes.TERMS) },
+                onPrivacy = { navController.navigate(Routes.PRIVACY) },
             )
         }
         composable(Routes.FORGOT_PASSWORD) {
@@ -123,13 +133,21 @@ fun TbzNavHost(
                         popUpTo(Routes.PORTAL_LOGIN) { inclusive = true }
                     }
                 },
+                onBack = { navController.popBackStack() },
             )
         }
         composable(Routes.MAIN) {
             MainShell(navController = navController)
         }
+        composable(Routes.SEARCH) {
+            GlobalSearchScreen(
+                onBack = { navController.popBackStack() },
+                onOpenGrower = { navController.navigate(Routes.registrationDetail(it)) },
+                onOpenPermit = { navController.navigate(Routes.permitDetail(it)) },
+            )
+        }
         composable(Routes.NOTIFICATIONS) {
-            NotificationsScreen()
+            NotificationsScreen(onBack = { navController.popBackStack() })
         }
         composable(Routes.REGISTRATION) {
             RegistrationHubScreen(
@@ -193,9 +211,30 @@ fun TbzNavHost(
         }
         composable(Routes.CORRECTIONS) {
             CorrectionsScreen(
+                onBack = { navController.popBackStack() },
                 onOpenGrowerCorrection = { navController.navigate(Routes.registrationCorrection(it)) },
                 onOpenTransportPermitCorrection = { navController.navigate(Routes.permitCorrection(it)) },
                 onOpenGroupPermitCorrection = { navController.navigate(Routes.groupPermitCorrection(it)) },
+            )
+        }
+        dialog(
+            route = Routes.MENU,
+            dialogProperties = DialogProperties(usePlatformDefaultWidth = false),
+        ) {
+            val parentEntry = navController.getBackStackEntry(Routes.MAIN)
+            val dashboardVm = hiltViewModel<DashboardViewModel>(parentEntry)
+            val pendingSync by dashboardVm.pendingSyncCount.collectAsState()
+            MoreOptionsSheet(
+                pendingSyncCount = if (pendingSync > 0) pendingSync else 4,
+                onSyncSettings = {
+                    navController.popBackStack()
+                    navController.navigate(Routes.SYNC_SETTINGS)
+                },
+                onAbout = {
+                    navController.popBackStack()
+                    navController.navigate(Routes.ABOUT)
+                },
+                onClose = { navController.popBackStack() },
             )
         }
         composable(Routes.INSPECTION) {
@@ -420,97 +459,58 @@ fun TbzNavHost(
 @Composable
 private fun MainShell(
     navController: NavHostController,
-    menuAccessViewModel: MenuAccessViewModel = hiltViewModel(),
 ) {
-    val menuAccess by menuAccessViewModel.state.collectAsState()
-    var selectedTab by rememberSaveable { mutableIntStateOf(0) }
+    var selectedTabName by rememberSaveable { mutableStateOf(GlTab.Home.name) }
+    val selectedTab = GlTab.valueOf(selectedTabName)
     val c = glColors()
     Scaffold(
         containerColor = c.bg,
         bottomBar = {
-            val itemColors = NavigationBarItemDefaults.colors(
-                selectedIconColor = c.primary,
-                selectedTextColor = c.primary,
-                indicatorColor = c.primarySoft,
-                unselectedIconColor = c.textSubtle,
-                unselectedTextColor = c.textSubtle,
+            GlBottomNav(
+                active = selectedTab,
+                onSelect = { selectedTabName = it.name },
+                onScan = { navController.navigate(Routes.PERMIT_VALIDATE) },
             )
-            NavigationBar(containerColor = c.surface, tonalElevation = 0.dp) {
-                NavigationBarItem(
-                    selected = selectedTab == 0,
-                    onClick = { selectedTab = 0 },
-                    icon = { GlIcon("home", filled = selectedTab == 0) },
-                    label = { Text("Home") },
-                    colors = itemColors,
-                )
-                NavigationBarItem(
-                    selected = selectedTab == 1,
-                    onClick = { selectedTab = 1 },
-                    icon = { GlIcon("search", filled = selectedTab == 1) },
-                    label = { Text("Search") },
-                    colors = itemColors,
-                )
-                NavigationBarItem(
-                    selected = selectedTab == 2,
-                    onClick = { selectedTab = 2 },
-                    icon = { GlIcon("menu", filled = selectedTab == 2) },
-                    label = { Text("More") },
-                    colors = itemColors,
-                )
-                NavigationBarItem(
-                    selected = selectedTab == 3,
-                    onClick = { selectedTab = 3 },
-                    icon = { GlIcon("profile", filled = selectedTab == 3) },
-                    label = { Text("Profile") },
-                    colors = itemColors,
-                )
-            }
         },
     ) { padding ->
         val contentModifier = Modifier.padding(padding)
         when (selectedTab) {
-            0 -> DashboardScreen(
+            GlTab.Home -> DashboardScreen(
                 modifier = contentModifier,
                 onOpenRegistration = { navController.navigate(Routes.REGISTRATION) },
+                onOpenPermits = { selectedTabName = GlTab.Permits.name },
+                onOpenInspection = { selectedTabName = GlTab.Inspection.name },
+                onOpenMarketing = { navController.navigate(Routes.MARKETING) },
                 onOpenCorrections = { navController.navigate(Routes.CORRECTIONS) },
-                onOpenSync = { navController.navigate(Routes.SYNC_SETTINGS) },
+                onOpenArbitration = { navController.navigate(Routes.ARBITRATION) },
+                onOpenSearch = { navController.navigate(Routes.SEARCH) },
+                onOpenNotifications = { navController.navigate(Routes.NOTIFICATIONS) },
+                onOpenPermitValidate = { navController.navigate(Routes.PERMIT_VALIDATE) },
+                onOpenInspectionDetail = { navController.navigate(Routes.inspectionDetail(it)) },
+                onOpenMenu = { navController.navigate(Routes.MENU) },
             )
-            1 -> Box(contentModifier) {
-                SearchScreen(
-                    onOpenGrower = { navController.navigate(Routes.registrationDetail(it)) },
-                    onOpenPermit = { navController.navigate(Routes.permitDetail(it)) },
-                )
-            }
-            2 -> Box(contentModifier) {
-                MenuScreen(
-                    onRegistration = { navController.navigate(Routes.REGISTRATION) },
-                    onInspection = { navController.navigate(Routes.INSPECTION) },
-                    onMarketing = { navController.navigate(Routes.MARKETING) },
-                    onPermits = { navController.navigate(Routes.PERMITS) },
-                    onArbitration = { navController.navigate(Routes.ARBITRATION) },
-                    onRenewal = { navController.navigate(Routes.RENEWAL) },
-                    onNotifications = { navController.navigate(Routes.NOTIFICATIONS) },
-                    onSyncSettings = { navController.navigate(Routes.SYNC_SETTINGS) },
-                    canRegistration = menuAccess.canRegistration,
-                    canInspection = menuAccess.canInspection,
-                    canMarketing = menuAccess.canMarketing,
-                    canPermits = menuAccess.canPermits,
-                    canArbitration = menuAccess.canArbitration,
-                )
-            }
-            3 -> Box(contentModifier) {
-                ProfileScreen(
-                    onChangePassword = { navController.navigate(Routes.CHANGE_PASSWORD) },
-                    onAbout = { navController.navigate(Routes.ABOUT) },
-                    onNotifications = { navController.navigate(Routes.NOTIFICATIONS) },
-                    onSyncSettings = { navController.navigate(Routes.SYNC_SETTINGS) },
-                    onLogout = {
-                        navController.navigate(Routes.PORTAL_LOGIN) {
-                            popUpTo(Routes.MAIN) { inclusive = true }
-                        }
-                    },
-                )
-            }
+            GlTab.Permits -> PermitListScreen(
+                modifier = contentModifier,
+                onOpenDetail = { navController.navigate(Routes.permitDetail(it)) },
+                onValidate = { navController.navigate(Routes.PERMIT_VALIDATE) },
+            )
+            GlTab.Inspection -> InspectionPortalListScreen(
+                modifier = contentModifier,
+                onOpenDetail = { navController.navigate(Routes.inspectionDetail(it)) },
+                onSchedule = { navController.navigate(Routes.INSPECTION_SCHEDULE) },
+            )
+            GlTab.Profile -> ProfileScreen(
+                modifier = contentModifier,
+                onChangePassword = { navController.navigate(Routes.CHANGE_PASSWORD) },
+                onAbout = { navController.navigate(Routes.ABOUT) },
+                onNotifications = { navController.navigate(Routes.NOTIFICATIONS) },
+                onSyncSettings = { navController.navigate(Routes.SYNC_SETTINGS) },
+                onLogout = {
+                    navController.navigate(Routes.PORTAL_LOGIN) {
+                        popUpTo(Routes.MAIN) { inclusive = true }
+                    }
+                },
+            )
         }
     }
 }

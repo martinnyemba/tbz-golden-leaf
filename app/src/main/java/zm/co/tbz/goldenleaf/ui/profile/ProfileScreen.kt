@@ -74,6 +74,7 @@ fun ProfileScreen(
     onNotifications: () -> Unit = {},
     onSyncSettings: () -> Unit,
     onLogout: () -> Unit,
+    modifier: Modifier = Modifier,
     viewModel: ProfileViewModel = hiltViewModel(),
 ) {
     val profile by viewModel.profile.collectAsState()
@@ -81,7 +82,7 @@ fun ProfileScreen(
     val c = glColors()
     val isDark = prefs?.darkTheme == true
 
-    Scaffold(containerColor = c.bg) { padding ->
+    Scaffold(containerColor = c.bg, modifier = modifier) { padding ->
         Column(
             Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()),
         ) {

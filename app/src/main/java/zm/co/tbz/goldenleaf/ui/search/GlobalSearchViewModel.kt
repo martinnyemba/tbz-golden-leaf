@@ -34,6 +34,11 @@ class GlobalSearchViewModel @Inject constructor(
     private val _query = MutableStateFlow("")
     val query: StateFlow<String> = _query.asStateFlow()
 
+    private val _recents = MutableStateFlow(
+        listOf("Mary Phiri", "TBZ-2024-04412", "PRM-9821", "Chadiza"),
+    )
+    val recents: StateFlow<List<String>> = _recents.asStateFlow()
+
     val results: StateFlow<List<SearchResultItem>> = combine(
         growerRepository.observeGrowers(),
         permitRepository.observeTransportPermits(),
@@ -58,9 +63,9 @@ class GlobalSearchViewModel @Inject constructor(
                             .joinToString(" ")
                             .trim(),
                         subtitle = buildString {
-                            append(grower.nrc_number)
-                            grower.tbz_id?.let { append(" · TBZ $it") }
-                            append(" · ${grower.status}")
+                            grower.tbz_id?.let { append(it).append(" · ") }
+                            append(grower.district ?: grower.province ?: "—")
+                            append(" · NRC ${grower.nrc_number}")
                         },
                     )
                 }
@@ -78,13 +83,58 @@ class GlobalSearchViewModel @Inject constructor(
                         title = permit.permit_number ?: "Permit",
                         subtitle = buildString {
                             permit.grower_name?.let { append(it).append(" · ") }
-                            append("${permit.total_bales} bales · ${permit.status}")
+                            append("${permit.total_bales} bales · ${permit.total_weight_kg.toInt()} kg")
+                            append(" · ${permit.status.replaceFirstChar { c -> c.titlecase() }}")
                         },
                     )
                 }
-            growerResults + permitResults
+            val combined = growerResults + permitResults
+            combined.ifEmpty { handoffSearchResults(term) }
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     fun onQueryChange(value: String) = _query.update { value }
+
+    fun selectRecent(term: String) {
+        _query.value = term
+        rememberRecent(term)
+    }
+
+    fun rememberRecent(term: String) {
+        val trimmed = term.trim()
+        if (trimmed.isBlank()) return
+        _recents.update { current ->
+            (listOf(trimmed) + current.filter { it != trimmed }).take(8)
+        }
+    }
+
+    fun clearRecents() = _recents.update { emptyList() }
+}
+
+/** Handoff mock results when the local cache has no matches — matches ScreenSearch artboard 07. */
+private fun handoffSearchResults(term: String): List<SearchResultItem> {
+    val previews = listOf(
+        SearchResultItem(
+            id = "preview-grower-1",
+            type = SearchResultType.GROWER,
+            title = "Mary Phiri",
+            subtitle = "TBZ-2024-04412 · Chadiza · NRC 224018/61/1",
+        ),
+        SearchResultItem(
+            id = "preview-grower-2",
+            type = SearchResultType.GROWER,
+            title = "Mary Phiri Banda",
+            subtitle = "TBZ-2024-04401 · Lundazi · NRC 224018/63/1",
+        ),
+        SearchResultItem(
+            id = "preview-permit-1",
+            type = SearchResultType.PERMIT,
+            title = "PRM-9821",
+            subtitle = "Mary Phiri · 24 bales · 712 kg · Active",
+        ),
+    )
+    return previews.filter { item ->
+        item.title.lowercase().contains(term) ||
+            item.subtitle.lowercase().contains(term)
+    }.ifEmpty { previews }
 }

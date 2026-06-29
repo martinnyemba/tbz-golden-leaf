@@ -210,6 +210,8 @@ fun PermitValidateScreen(
 @Composable
 fun PermitListScreen(
     onOpenDetail: (String) -> Unit,
+    onValidate: () -> Unit = {},
+    modifier: Modifier = Modifier,
     viewModel: PermitViewModel = hiltViewModel(),
 ) {
     val permits by viewModel.filteredPermits.collectAsState()
@@ -217,9 +219,22 @@ fun PermitListScreen(
     val uiState by viewModel.requestState.collectAsState()
     val c = glColors()
 
-    Scaffold(containerColor = c.bg) { padding ->
+    Scaffold(containerColor = c.bg, modifier = modifier) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
-            GlScreenHeader(title = "Permit list")
+            GlScreenHeader(
+                title = "Permits",
+                subtitle = "${permits.size} cached",
+                actions = {
+                    GlButton(
+                        text = "Scan",
+                        onClick = onValidate,
+                        variant = GlButtonVariant.Gold,
+                        size = GlButtonSize.Sm,
+                        fillMaxWidth = false,
+                        leadingIcon = "qr",
+                    )
+                },
+            )
             Column(Modifier.padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 GlSearchBar(
                     value = uiState.searchQuery,

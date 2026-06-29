@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -83,7 +84,6 @@ import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
-import androidx.compose.material3.exposedDropdownSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -96,7 +96,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -990,6 +992,70 @@ fun GlFieldRow(label: String, value: String, modifier: Modifier = Modifier, mono
             fontFamily = if (mono) Mono else FontFamily.Default,
             modifier = Modifier.padding(start = 16.dp),
         )
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// OTP BOXES (6-digit visual entry)
+// ─────────────────────────────────────────────────────────────────────────────
+@Composable
+fun GlOtpBoxes(
+    value: String,
+    length: Int = 6,
+    modifier: Modifier = Modifier,
+) {
+    val c = glColors()
+    Row(modifier = modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        repeat(length) { index ->
+            val char = value.getOrNull(index)?.toString().orEmpty()
+            val filled = char.isNotEmpty()
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(60.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(if (filled) c.primarySoft else c.surfaceAlt)
+                    .border(1.5.dp, if (filled) c.primary else Color.Transparent, RoundedCornerShape(16.dp)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = if (filled) char else "·",
+                    color = if (filled) c.primary else c.placeholder,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontFamily = Mono,
+                )
+            }
+        }
+    }
+}
+
+/** Interactive 6-digit OTP entry with design-system box visuals. */
+@Composable
+fun GlOtpInput(
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    length: Int = 6,
+) {
+    val focusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable { focusRequester.requestFocus() },
+    ) {
+        androidx.compose.foundation.text.BasicTextField(
+            value = value,
+            onValueChange = { raw -> onValueChange(raw.filter { it.isDigit() }.take(length)) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(60.dp)
+                .alpha(0f)
+                .focusRequester(focusRequester),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+            singleLine = true,
+        )
+        GlOtpBoxes(value = value, length = length)
     }
 }
 

@@ -268,15 +268,39 @@ fun LocalSchedulesScreen(
 @Composable
 fun InspectionPortalListScreen(
     onOpenDetail: (String) -> Unit,
+    onSchedule: () -> Unit = {},
+    modifier: Modifier = Modifier,
     viewModel: InspectionViewModel = hiltViewModel(),
 ) {
     val inspections by viewModel.filteredInspections.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
+    val stats by viewModel.hubStats.collectAsState()
     val c = glColors()
 
-    Scaffold(containerColor = c.bg) { padding ->
+    Scaffold(containerColor = c.bg, modifier = modifier) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
-            GlScreenHeader(title = "Portal inspections")
+            GlScreenHeader(
+                title = "Inspections",
+                subtitle = "${stats.scheduled} scheduled",
+                actions = {
+                    GlButton(
+                        text = "Schedule",
+                        onClick = onSchedule,
+                        variant = GlButtonVariant.Surface,
+                        size = GlButtonSize.Sm,
+                        fillMaxWidth = false,
+                        leadingIcon = "calendar",
+                    )
+                },
+            )
+            Row(
+                modifier = Modifier.padding(horizontal = 20.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                GlKpiTile("Today", stats.scheduled.toString(), Modifier.weight(1f), tone = GlTone.Primary, icon = "calendar")
+                GlKpiTile("High risk", stats.highRisk.toString(), Modifier.weight(1f), tone = GlTone.Danger, icon = "warning")
+                GlKpiTile("Pending sync", (stats.schedulesPendingSync + stats.reportsPendingSync).toString(), Modifier.weight(1f), tone = GlTone.Gold, icon = "cloud-up")
+            }
             Column(Modifier.padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 GlSearchBar(
                     value = uiState.searchQuery,
