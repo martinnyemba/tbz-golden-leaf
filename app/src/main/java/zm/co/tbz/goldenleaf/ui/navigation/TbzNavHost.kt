@@ -437,6 +437,7 @@ fun TbzNavHost(
         composable(Routes.PENDING_SALES) {
             PendingSalesScreen(
                 onEdit = { navController.navigate(Routes.editPendingSale(it)) },
+                onCapture = { navController.navigate(Routes.SALES) },
             )
         }
         composable(
