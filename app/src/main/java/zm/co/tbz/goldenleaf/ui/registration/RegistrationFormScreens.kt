@@ -31,8 +31,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.google.android.gms.location.LocationServices
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import kotlin.coroutines.resume
 import zm.co.tbz.goldenleaf.ui.components.ErrorText
 import zm.co.tbz.goldenleaf.ui.components.GlAccent
@@ -50,6 +52,8 @@ import zm.co.tbz.goldenleaf.ui.components.GlTextField
 import zm.co.tbz.goldenleaf.ui.components.GlTone
 import zm.co.tbz.goldenleaf.ui.components.NrcScanButton
 import zm.co.tbz.goldenleaf.ui.components.glColors
+import zm.co.tbz.goldenleaf.ui.scan.DocumentScanner
+import zm.co.tbz.goldenleaf.ui.scan.ScannedImageStore
 
 @Composable
 fun NewGrowerRegistrationScreen(
@@ -136,17 +140,32 @@ private fun PersonalDetailsStep(
     }
 
     var photoTarget by remember { mutableStateOf<String?>(null) }
+    var scanningTarget by remember { mutableStateOf<String?>(null) }
     val photoPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.PickVisualMedia(),
     ) { uri: Uri? ->
-        uri?.toString()?.let { path ->
-            when (photoTarget) {
-                "profile" -> onPersonalChange(personal.copy(profilePhotoPath = path))
-                "front" -> onPersonalChange(personal.copy(idFrontPath = path))
-                "back" -> onPersonalChange(personal.copy(idBackPath = path))
-            }
-        }
+        val target = photoTarget
         photoTarget = null
+        if (uri == null || target == null) return@rememberLauncherForActivityResult
+        if (target == "profile") {
+            onPersonalChange(personal.copy(profilePhotoPath = uri.toString()))
+            return@rememberLauncherForActivityResult
+        }
+        scanningTarget = target
+        scope.launch {
+            val scannedPath = withContext(Dispatchers.Default) {
+                runCatching {
+                    val bitmap = ScannedImageStore.loadBitmap(context, uri) ?: return@runCatching null
+                    val scanned = DocumentScanner.scanDocument(bitmap)
+                    ScannedImageStore.save(context, scanned, target).toString()
+                }.getOrNull()
+            } ?: uri.toString()
+            when (target) {
+                "front" -> onPersonalChange(personal.copy(idFrontPath = scannedPath))
+                "back" -> onPersonalChange(personal.copy(idBackPath = scannedPath))
+            }
+            scanningTarget = null
+        }
     }
 
     ScrollableFormColumn {
@@ -202,11 +221,11 @@ private fun PersonalDetailsStep(
             photoTarget = "profile"
             photoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
         }
-        PhotoPickRow("ID front", personal.idFrontPath, errors["idFront"]) {
+        PhotoPickRow("ID front", personal.idFrontPath, errors["idFront"], isProcessing = scanningTarget == "front") {
             photoTarget = "front"
             photoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
         }
-        PhotoPickRow("ID back", personal.idBackPath, errors["idBack"]) {
+        PhotoPickRow("ID back", personal.idBackPath, errors["idBack"], isProcessing = scanningTarget == "back") {
             photoTarget = "back"
             photoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
         }
@@ -301,6 +320,7 @@ private fun PhotoPickRow(
     label: String,
     path: String?,
     error: String?,
+    isProcessing: Boolean = false,
     onPick: () -> Unit,
 ) {
     Column {
@@ -315,13 +335,20 @@ private fun PhotoPickRow(
                     Column {
                         Text(label, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = glColors().text)
                         Text(
-                            if (path != null) "Selected" else "Not selected",
+                            if (isProcessing) "Scanning…" else if (path != null) "Selected" else "Not selected",
                             fontSize = 12.sp,
                             color = glColors().textMuted,
                         )
                     }
                 }
-                GlButton(text = if (path != null) "Replace" else "Upload", onClick = onPick, variant = GlButtonVariant.Outline, size = GlButtonSize.Sm, fillMaxWidth = false)
+                GlButton(
+                    text = if (isProcessing) "Scanning…" else if (path != null) "Replace" else "Upload",
+                    onClick = onPick,
+                    variant = GlButtonVariant.Outline,
+                    size = GlButtonSize.Sm,
+                    fillMaxWidth = false,
+                    enabled = !isProcessing,
+                )
             }
         }
         error?.let { ErrorText(it, Modifier.padding(top = 4.dp, start = 4.dp)) }
