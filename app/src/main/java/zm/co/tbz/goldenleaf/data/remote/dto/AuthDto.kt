@@ -1,11 +1,15 @@
 package zm.co.tbz.goldenleaf.data.remote.dto
 
+import kotlinx.serialization.EncodeDefault
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable
 data class LoginRequest(
     val email: String,
     val password: String,
+    @EncodeDefault(EncodeDefault.Mode.NEVER)
     val otp: String? = null,
 )
 

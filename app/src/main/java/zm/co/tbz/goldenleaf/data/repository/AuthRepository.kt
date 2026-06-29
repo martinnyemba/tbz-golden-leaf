@@ -1,8 +1,11 @@
 package zm.co.tbz.goldenleaf.data.repository
 
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
-import kotlinx.serialization.encodeToString
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import java.net.HttpURLConnection
+import java.net.URL
 import zm.co.tbz.goldenleaf.data.local.preferences.UserPreferences
 import zm.co.tbz.goldenleaf.data.remote.ApiErrorParser
 import zm.co.tbz.goldenleaf.data.remote.ApiResult
@@ -43,12 +46,25 @@ class AuthRepository @Inject constructor(
         }
     }
 
-    suspend fun testConnection(): ApiResult<Unit> {
-        return try {
-            api.syncStatus()
-            ApiResult.Success(Unit)
+    suspend fun testConnection(): ApiResult<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val portalRoot = portalSettings.getApiBaseUrl()
+                .trimEnd('/')
+                .removeSuffix("/api/v1")
+            val connection = (URL("${portalRoot.trimEnd('/')}/health/").openConnection() as HttpURLConnection).apply {
+                requestMethod = "GET"
+                connectTimeout = 10_000
+                readTimeout = 10_000
+            }
+            val code = connection.responseCode
+            connection.disconnect()
+            if (code in 200..299) {
+                ApiResult.Success(Unit)
+            } else {
+                ApiResult.Error("Server returned HTTP $code")
+            }
         } catch (e: Exception) {
-            ApiResult.Error(ApiErrorParser.parse(e, json))
+            ApiResult.Error(e.message ?: "Connection failed")
         }
     }
 

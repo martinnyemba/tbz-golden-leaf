@@ -49,6 +49,7 @@ class LoginViewModel @Inject constructor(
     fun testConnection() {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, connectionMessage = null, error = null) }
+            authRepository.updatePortalBaseUrl(_state.value.portalUrl)
             when (val result = authRepository.testConnection()) {
                 is ApiResult.Success -> _state.update { it.copy(isLoading = false, connectionMessage = "Connection OK") }
                 is ApiResult.Error -> _state.update { it.copy(isLoading = false, error = result.message) }

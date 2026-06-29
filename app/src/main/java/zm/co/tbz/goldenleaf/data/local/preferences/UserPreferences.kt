@@ -16,7 +16,7 @@ import javax.inject.Singleton
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "tbz_prefs")
 
-private const val DEFAULT_PORTAL_BASE_URL = "http://10.0.2.2:8001"
+private const val DEFAULT_PORTAL_BASE_URL = "http://10.0.2.2:8000"
 
 data class AppPreferences(
     val portalBaseUrl: String = DEFAULT_PORTAL_BASE_URL,
@@ -83,7 +83,7 @@ class UserPreferences @Inject constructor(
     }
 
     companion object {
-        const val DEFAULT_PORTAL_BASE_URL = "http://10.0.2.2:8001"
+        const val DEFAULT_PORTAL_BASE_URL = "http://10.0.2.2:8000"
 
         fun normalizePortalUrl(raw: String): String {
             var url = raw.trim().trimEnd('/')

@@ -15,6 +15,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -148,12 +150,17 @@ fun PortalLoginScreen(
             onDismissRequest = viewModel::toggleApiSettings,
             title = { Text("Portal Base URL") },
             text = {
-                OutlinedTextField(
-                    value = state.portalUrl,
-                    onValueChange = viewModel::onPortalUrlChange,
-                    label = { Text("Portal URL") },
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = state.portalUrl,
+                        onValueChange = viewModel::onPortalUrlChange,
+                        label = { Text("Portal URL") },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    state.connectionMessage?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
+                    state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                    if (state.isLoading) CircularProgressIndicator()
+                }
             },
             confirmButton = {
                 TextButton(onClick = {
