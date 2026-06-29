@@ -28,6 +28,14 @@ object Routes {
     const val REGISTRATION_STEP_FARM = "registration/wizard/step-farm"
     const val REGISTRATION_STEP_PHOTOS = "registration/wizard/step-photos"
     const val REGISTRATION_SUCCESS = "registration/wizard/success"
+
+    /** Relative routes within the [REGISTRATION_WIZARD] nested graph — use for navigate() inside the wizard. */
+    const val WIZARD_SCAN_ID = "scan-id"
+    const val WIZARD_STEP_TYPE = "step-type"
+    const val WIZARD_STEP_IDENTITY = "step-identity"
+    const val WIZARD_STEP_FARM = "step-farm"
+    const val WIZARD_STEP_PHOTOS = "step-photos"
+    const val WIZARD_SUCCESS = "success"
     const val REGISTRATION_NEW = "registration/new"
     const val REGISTRATION_LIST = "registration/list"
     const val REGISTRATION_LOCAL = "registration/local"

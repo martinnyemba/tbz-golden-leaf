@@ -111,13 +111,23 @@ private fun NrcScannerDialog(
                     }
                 }
             } else {
+                var scanned by remember { mutableStateOf(false) }
                 Box(
                     Modifier
                         .fillMaxWidth()
                         .height(280.dp)
                         .padding(top = 8.dp),
                 ) {
-                    NrcCameraPreview(onScan = onResult)
+                    NrcCameraPreview(
+                        onScan = { value ->
+                            if (!scanned) {
+                                scanned = true
+                                onResult(value)
+                            }
+                        },
+                        modifier = Modifier.fillMaxSize(),
+                        active = !scanned,
+                    )
                 }
                 Text(
                     "Align the NRC (or passport) number within the frame",
@@ -133,12 +143,15 @@ private fun NrcScannerDialog(
 }
 
 @Composable
-private fun NrcCameraPreview(onScan: (String) -> Unit) {
+internal fun NrcCameraPreview(
+    onScan: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    active: Boolean = true,
+) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
     val recognizer = remember { TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS) }
-    var scanned by remember { mutableStateOf(false) }
 
     DisposableEffect(Unit) {
         onDispose {
@@ -153,7 +166,7 @@ private fun NrcCameraPreview(onScan: (String) -> Unit) {
                 scaleType = PreviewView.ScaleType.FILL_CENTER
             }
         },
-        modifier = Modifier.fillMaxSize(),
+        modifier = modifier,
         update = { previewView ->
             val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
             cameraProviderFuture.addListener({
@@ -166,7 +179,7 @@ private fun NrcCameraPreview(onScan: (String) -> Unit) {
                     .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                     .build()
                 analysis.setAnalyzer(cameraExecutor) { imageProxy ->
-                    if (scanned) {
+                    if (!active) {
                         imageProxy.close()
                         return@setAnalyzer
                     }
@@ -179,8 +192,7 @@ private fun NrcCameraPreview(onScan: (String) -> Unit) {
                         recognizer.process(image)
                             .addOnSuccessListener { result ->
                                 val match = extractNrcOrPassport(result.text)
-                                if (match != null && !scanned) {
-                                    scanned = true
+                                if (match != null) {
                                     onScan(match)
                                 }
                             }

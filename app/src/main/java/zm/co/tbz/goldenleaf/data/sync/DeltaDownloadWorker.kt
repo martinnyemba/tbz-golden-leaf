@@ -7,7 +7,6 @@ import androidx.work.WorkerParameters
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import zm.co.tbz.goldenleaf.data.local.preferences.UserPreferences
-import zm.co.tbz.goldenleaf.data.local.entity.GrowerEntity
 import zm.co.tbz.goldenleaf.data.local.entity.GroupPermitEntity
 import zm.co.tbz.goldenleaf.data.local.entity.InspectionEntity
 import zm.co.tbz.goldenleaf.data.local.entity.SyncCursorEntity
@@ -55,36 +54,12 @@ class DeltaDownloadWorker @AssistedInject constructor(
 
     private suspend fun pullGrowers() {
         val cursor = syncRepository.getCursor(ENTITY_GROWERS)
-        var updatedAfter = cursor?.updated_after
-        var pageAfter: String? = null
-        val maxUpdated = cursor?.updated_after
-        do {
-            val page = api.getGrowers(updatedAfter = updatedAfter)
-            val entities = page.results.map { dto ->
-                GrowerEntity(
-                    local_id = dto.id,
-                    remote_id = dto.id,
-                    sync_status = SyncStatuses.SYNCED,
-                    idempotency_key = dto.id,
-                    updated_at_local = System.currentTimeMillis(),
-                    updated_at_server = null,
-                    first_name = dto.first_name,
-                    last_name = dto.last_name,
-                    nrc_number = dto.nrc_number ?: "",
-                    tbz_id = dto.tbz_id,
-                    province = dto.province,
-                    district = dto.district,
-                    status = dto.status,
-                )
-            }
-            growerRepository.upsertGrowersFromServer(entities)
-            pageAfter = page.next
-            updatedAfter = null
-        } while (pageAfter != null)
+        val updatedAfter = cursor?.updated_after
+        growerRepository.pullGrowersDelta(updatedAfter)
         syncRepository.upsertCursor(
             SyncCursorEntity(
                 entity_type = ENTITY_GROWERS,
-                updated_after = maxUpdated ?: nowIso(),
+                updated_after = updatedAfter ?: nowIso(),
                 last_success_at = System.currentTimeMillis(),
             ),
         )

@@ -20,7 +20,7 @@ object GrowerFormChoices {
         "SUSPENDED",
     )
     val syncFilters = listOf("All", "pending", "synced", "failed")
-    val listStatusFilters = listOf("All", "Active", "Pending", "High risk", "Drafts")
+    val listStatusFilters = listOf("All", "Draft", "Pending", "Returned", "Approved", "Active", "Rejected", "Suspended")
     val updateQueueFilters = listOf("All", "Pending", "Failed", "Needs review", "Synced")
     val wizardStepLabels = listOf("Type", "Identity", "Farm", "Photos")
     val growerTypeOptions = listOf(
@@ -111,6 +111,7 @@ data class GrowerListItem(
 
 data class GrowerUpdateQueueItem(
     val localId: String,
+    val growerLocalId: String,
     val growerName: String,
     val tbzId: String,
     val changedFields: String,
@@ -129,9 +130,9 @@ val handoffGrowerListItems = listOf(
 )
 
 val handoffGrowerUpdateItems = listOf(
-    GrowerUpdateQueueItem("preview-u1", "Mary Phiri", "TBZ-2024-04412", "Phone, address", "pending", "12 May 09:42"),
-    GrowerUpdateQueueItem("preview-u2", "Charles Tembo", "TBZ-2024-03128", "District, province", "synced", "11 May 14:20"),
-    GrowerUpdateQueueItem("preview-u3", "Loveness Banda", "TBZ-2024-04610", "NRC, date of birth", "failed", "10 May 08:15", "NRC already exists on another registered grower"),
-    GrowerUpdateQueueItem("preview-u4", "Felix Sakala", "TBZ-2024-04501", "Email, phone", "pending", "10 May 16:30"),
-    GrowerUpdateQueueItem("preview-u5", "Gladys Mwale", "TBZ-2024-02981", "Address, town", "needs_review", "08 May 11:10", "Grower status changed by approver — please confirm edit before retrying"),
+    GrowerUpdateQueueItem("preview-u1", "preview-1", "Mary Phiri", "TBZ-2024-04412", "Phone, address", "pending", "12 May 09:42"),
+    GrowerUpdateQueueItem("preview-u2", "preview-2", "Charles Tembo", "TBZ-2024-03128", "District, province", "synced", "11 May 14:20"),
+    GrowerUpdateQueueItem("preview-u3", "preview-3", "Loveness Banda", "TBZ-2024-04610", "NRC, date of birth", "failed", "10 May 08:15", "NRC already exists on another registered grower"),
+    GrowerUpdateQueueItem("preview-u4", "preview-4", "Felix Sakala", "TBZ-2024-04501", "Email, phone", "pending", "10 May 16:30"),
+    GrowerUpdateQueueItem("preview-u5", "preview-5", "Gladys Mwale", "TBZ-2024-02981", "Address, town", "needs_review", "08 May 11:10", "Grower status changed by approver — please confirm edit before retrying"),
 )

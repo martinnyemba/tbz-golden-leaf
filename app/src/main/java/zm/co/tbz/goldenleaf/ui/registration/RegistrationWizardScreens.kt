@@ -1,5 +1,6 @@
 package zm.co.tbz.goldenleaf.ui.registration
 
+import android.Manifest
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -20,8 +21,19 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.launch
+import zm.co.tbz.goldenleaf.ui.scan.IdDocumentScanning
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -39,6 +51,8 @@ import zm.co.tbz.goldenleaf.ui.components.GlDivider
 import zm.co.tbz.goldenleaf.ui.components.GlDropdownField
 import zm.co.tbz.goldenleaf.ui.components.GlFieldRow
 import zm.co.tbz.goldenleaf.ui.components.GlIcon
+import zm.co.tbz.goldenleaf.ui.components.NrcCameraPreview
+import zm.co.tbz.goldenleaf.ui.components.NrcScanButton
 import zm.co.tbz.goldenleaf.ui.components.GlImageSlot
 import zm.co.tbz.goldenleaf.ui.components.GlPill
 import zm.co.tbz.goldenleaf.ui.components.GlPillSize
@@ -104,7 +118,8 @@ fun RegistrationStepTypeScreen(
             WizardFooter("Cancel", onBack, "Continue", onContinue, primaryIcon = "arrow-right")
         },
     ) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState())) {
+        Column(Modifier.fillMaxSize().padding(padding)) {
+            Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
             GlScreenHeader(title = "New grower", subtitle = "1 of 4", onBack = onBack)
             GlStepper(step = 1, total = 4, stepLabels = wizardLabels)
             Column(Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
@@ -119,7 +134,7 @@ fun RegistrationStepTypeScreen(
                     GrowerFormChoices.growerTypeOptions.forEach { (key, meta) ->
                         val selected = personal.growerTypeKey == key
                         GlCard(
-                            onClick = { viewModel.updatePersonal { it.copy(growerTypeKey = key) } },
+                            onClick = { viewModel.applyGrowerTypeKey(key) },
                             contentPadding = 14.dp,
                             elevated = false,
                             modifier = Modifier
@@ -188,6 +203,7 @@ fun RegistrationStepTypeScreen(
                     )
                 }
             }
+            }
         }
     }
 }
@@ -210,7 +226,8 @@ fun RegistrationStepIdentityScreen(
             WizardFooter("Back", onBack, "Continue", onContinue, primaryIcon = "arrow-right")
         },
     ) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState())) {
+        Column(Modifier.fillMaxSize().padding(padding)) {
+            Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
             GlScreenHeader(title = "New grower", subtitle = "2 of 4", onBack = onBack)
             GlStepper(step = 2, total = 4, stepLabels = wizardLabels)
             Column(
@@ -251,6 +268,10 @@ fun RegistrationStepIdentityScreen(
                         }
                     },
                 )
+                NrcScanButton(
+                    onScan = { viewModel.applyScannedNrc(it) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     GlDropdownField(
                         label = "Gender",
@@ -289,6 +310,7 @@ fun RegistrationStepIdentityScreen(
                     onSelected = { viewModel.updatePersonal { p -> p.copy(cooperative = it) } },
                 )
             }
+            }
         }
     }
 }
@@ -302,13 +324,16 @@ fun RegistrationStepFarmScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val personal = uiState.personal
+    val crop = uiState.crop
     val provinces by viewModel.provinces.collectAsState()
+    val tobaccoTypes by viewModel.tobaccoTypes.collectAsState()
+    val barnTypes by viewModel.barnTypes.collectAsState()
     val districts by viewModel.districtsForProvince(personal.provinceId).collectAsState(initial = emptyList())
     val c = glColors()
     val gpsLabel = if (personal.gpsLatitude.isNotBlank() && personal.gpsLongitude.isNotBlank()) {
-        "${personal.gpsLatitude}, ${personal.gpsLongitude} · ±4 m"
+        "${personal.gpsLatitude}, ${personal.gpsLongitude}"
     } else {
-        "-13.85044, 32.50217 · ±4 m"
+        "Not captured"
     }
 
     Scaffold(
@@ -317,13 +342,28 @@ fun RegistrationStepFarmScreen(
             WizardFooter("Back", onBack, "Continue", onContinue, primaryIcon = "arrow-right")
         },
     ) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState())) {
+        Column(Modifier.fillMaxSize().padding(padding)) {
+            Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
             GlScreenHeader(title = "New grower", subtitle = "3 of 4", onBack = onBack)
             GlStepper(step = 3, total = 4, stepLabels = wizardLabels)
             Column(
                 Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
+                GlTextField(
+                    value = personal.address,
+                    onValueChange = { viewModel.updatePersonal { p -> p.copy(address = it) } },
+                    label = "Address / farm / plot",
+                    required = true,
+                    error = uiState.personalErrors["address"],
+                )
+                GlTextField(
+                    value = personal.townVillage,
+                    onValueChange = { viewModel.updatePersonal { p -> p.copy(townVillage = it) } },
+                    label = "Town / village",
+                    required = true,
+                    error = uiState.personalErrors["townVillage"],
+                )
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     GlDropdownField(
                         label = "Province",
@@ -392,17 +432,56 @@ fun RegistrationStepFarmScreen(
                 }
                 GlDropdownField(
                     label = "Tobacco type",
-                    options = GrowerFormChoices.tobaccoTypeOptions.map { it to it },
-                    selectedId = personal.tobaccoTypeName.ifBlank { "Burley" },
-                    onSelected = { viewModel.updatePersonal { p -> p.copy(tobaccoTypeName = it) } },
+                    options = tobaccoTypes.map { it.id to it.name }.ifEmpty {
+                        GrowerFormChoices.tobaccoTypeOptions.map { it to it }
+                    },
+                    selectedId = tobaccoTypes.firstOrNull { it.name == personal.tobaccoTypeName }?.id
+                        ?: personal.tobaccoTypeName,
+                    onSelected = { id ->
+                        val name = tobaccoTypes.firstOrNull { it.id == id }?.name ?: id
+                        viewModel.updatePersonal { p -> p.copy(tobaccoTypeName = name) }
+                    },
                     required = true,
+                    error = uiState.cropErrors["tobaccoTypeId"],
                 )
                 GlDropdownField(
-                    label = "Curing structure",
-                    options = GrowerFormChoices.curingStructureOptions.map { it to it },
-                    selectedId = personal.curingStructure.ifBlank { "Open shed" },
-                    onSelected = { viewModel.updatePersonal { p -> p.copy(curingStructure = it) } },
+                    label = "Barn type",
+                    options = barnTypes.map { it.id to it.name }.ifEmpty {
+                        GrowerFormChoices.curingStructureOptions.map { it to it }
+                    },
+                    selectedId = barnTypes.firstOrNull { it.name == personal.curingStructure }?.id
+                        ?: personal.curingStructure,
+                    onSelected = { id ->
+                        val name = barnTypes.firstOrNull { it.id == id }?.name ?: id
+                        viewModel.updatePersonal { p -> p.copy(curingStructure = name) }
+                    },
+                    required = true,
+                    error = uiState.cropErrors["barnTypeId"],
                 )
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    GlTextField(
+                        value = crop.numberOfBarns,
+                        onValueChange = { value -> viewModel.updateCrop { it.copy(numberOfBarns = value) } },
+                        label = "Number of barns",
+                        modifier = Modifier.weight(1f),
+                        error = uiState.cropErrors["numberOfBarns"],
+                    )
+                    GlTextField(
+                        value = crop.stringsPerBarn,
+                        onValueChange = { value -> viewModel.updateCrop { it.copy(stringsPerBarn = value) } },
+                        label = "Strings per barn",
+                        modifier = Modifier.weight(1f),
+                        error = uiState.cropErrors["stringsPerBarn"],
+                    )
+                }
+                val hectarage = crop.hectarage.ifBlank { personal.tobaccoAreaHa.ifBlank { personal.totalAreaHa } }.toDoubleOrNull()
+                hectarage?.let {
+                    GlBanner(
+                        title = "Estimated yield: ${calculateYieldPerHa(it)} kg/ha",
+                        tone = GlTone.Info,
+                        icon = "info",
+                    )
+                }
                 GlTextField(
                     value = personal.estimatedYieldKg,
                     onValueChange = { viewModel.updatePersonal { p -> p.copy(estimatedYieldKg = it) } },
@@ -415,6 +494,7 @@ fun RegistrationStepFarmScreen(
                     placeholder = "Additional notes…",
                     singleLine = false,
                 )
+            }
             }
         }
     }
@@ -430,11 +510,44 @@ fun RegistrationStepPhotosScreen(
     val uiState by viewModel.uiState.collectAsState()
     val personal = uiState.personal
     val c = glColors()
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var photoTarget by remember { mutableStateOf<String?>(null) }
+    var scanningTarget by remember { mutableStateOf<String?>(null) }
+    val photoPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia(),
+    ) { uri ->
+        val target = photoTarget
+        photoTarget = null
+        if (uri == null || target == null) return@rememberLauncherForActivityResult
+        if (target == IdDocumentScanning.TARGET_PROFILE || target == "farm") {
+            val path = uri.toString()
+            viewModel.updatePersonal {
+                when (target) {
+                    IdDocumentScanning.TARGET_PROFILE -> it.copy(profilePhotoPath = path)
+                    else -> it.copy(farmOverviewPhotoPath = path)
+                }
+            }
+            return@rememberLauncherForActivityResult
+        }
+        scanningTarget = target
+        scope.launch {
+            val scannedPath = IdDocumentScanning.processPick(context, uri, target)
+            viewModel.updatePersonal {
+                when (target) {
+                    IdDocumentScanning.TARGET_ID_FRONT -> it.copy(idFrontPath = scannedPath)
+                    IdDocumentScanning.TARGET_ID_BACK -> it.copy(idBackPath = scannedPath)
+                    else -> it
+                }
+            }
+            scanningTarget = null
+        }
+    }
     val photoSlots = listOf(
-        Triple("NRC · Front", personal.idFrontPath != null, personal.idFrontPath),
-        Triple("NRC · Back", personal.idBackPath != null, personal.idBackPath),
-        Triple("Farm overview", personal.farmOverviewPhotoPath != null, personal.farmOverviewPhotoPath),
-        Triple("Curing barn", personal.curingBarnPhotoPath != null, personal.curingBarnPhotoPath),
+        Triple("Profile photo", personal.profilePhotoPath != null, IdDocumentScanning.TARGET_PROFILE),
+        Triple("NRC · Front", personal.idFrontPath != null, IdDocumentScanning.TARGET_ID_FRONT),
+        Triple("NRC · Back", personal.idBackPath != null, IdDocumentScanning.TARGET_ID_BACK),
+        Triple("Farm overview", personal.farmOverviewPhotoPath != null, "farm"),
     )
 
     Scaffold(
@@ -450,31 +563,36 @@ fun RegistrationStepPhotosScreen(
             )
         },
     ) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState())) {
+        Column(Modifier.fillMaxSize().padding(padding)) {
+            Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
             GlScreenHeader(title = "New grower", subtitle = "4 of 4", onBack = onBack)
             GlStepper(step = 4, total = 4, stepLabels = wizardLabels)
             Column(Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
                 GlBanner(
                     title = "3 photos required",
-                    subtitle = "NRC front · NRC back · Farm overview. Optional: signature, additional photos.",
+                    subtitle = "Profile photo · NRC front · NRC back. Optional: farm overview.",
                     tone = GlTone.Warning,
                     icon = "camera",
                 )
+                uiState.personalErrors["profilePhoto"]?.let {
+                    GlBanner(title = it, tone = GlTone.Danger, icon = "warning")
+                }
                 GlSectionHeader(title = "Required", modifier = Modifier.padding(top = 14.dp))
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     photoSlots.chunked(2).forEach { row ->
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            row.forEach { (label, captured, _) ->
+                            row.forEach { (label, captured, target) ->
+                                val processing = scanningTarget == target
                                 PhotoCaptureCard(
                                     label = label,
                                     captured = captured,
+                                    processing = processing,
                                     onClick = {
-                                        when (label) {
-                                            "NRC · Front" -> viewModel.updatePersonal { it.copy(idFrontPath = "captured") }
-                                            "NRC · Back" -> viewModel.updatePersonal { it.copy(idBackPath = "captured") }
-                                            "Farm overview" -> viewModel.updatePersonal { it.copy(farmOverviewPhotoPath = "captured") }
-                                            else -> viewModel.updatePersonal { it.copy(curingBarnPhotoPath = "captured") }
-                                        }
+                                        if (processing) return@PhotoCaptureCard
+                                        photoTarget = target
+                                        photoPicker.launch(
+                                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
+                                        )
                                     },
                                     modifier = Modifier.weight(1f),
                                 )
@@ -482,6 +600,9 @@ fun RegistrationStepPhotosScreen(
                             if (row.size == 1) Spacer(Modifier.weight(1f))
                         }
                     }
+                }
+                uiState.saveError?.let {
+                    GlBanner(title = it, tone = GlTone.Danger, icon = "warning", modifier = Modifier.padding(top = 12.dp))
                 }
                 GlSectionHeader(title = "Signature", modifier = Modifier.padding(top = 16.dp))
                 GlCard(contentPadding = 14.dp) {
@@ -541,6 +662,7 @@ fun RegistrationStepPhotosScreen(
                     )
                 }
             }
+            }
         }
     }
 }
@@ -551,11 +673,16 @@ private fun PhotoCaptureCard(
     captured: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    processing: Boolean = false,
 ) {
     val c = glColors()
     GlCard(onClick = onClick, contentPadding = 0.dp, modifier = modifier) {
         GlImageSlot(
-            label = if (captured) "" else "tap to capture",
+            label = when {
+                processing -> "Scanning…"
+                captured -> ""
+                else -> "tap to capture"
+            },
             height = 120.dp,
             rounded = 0.dp,
         )
@@ -581,7 +708,8 @@ private fun PhotoCaptureCard(
 fun RegistrationSuccessScreen(
     onViewGrower: () -> Unit,
     onBackToList: () -> Unit,
-    provisionalId: String = "TBZ-2024-04412",
+    growerName: String = "Grower",
+    provisionalId: String = "Pending sync",
 ) {
     val c = glColors()
     Scaffold(
@@ -624,7 +752,7 @@ fun RegistrationSuccessScreen(
                 modifier = Modifier.padding(top = 16.dp),
             )
             Text(
-                "Mary Phiri has been queued for sync. You'll receive a confirmation when the grower ID is issued.",
+                "$growerName has been queued for sync. You'll receive a confirmation when the grower ID is issued.",
                 color = c.textMuted,
                 fontSize = 14.sp,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -656,8 +784,26 @@ fun ScanNrcScreen(
     onManualEntry: () -> Unit,
     viewModel: RegistrationViewModel,
 ) {
+    val context = LocalContext.current
     val c = glColors()
-  Box(
+    var detectedNrc by remember { mutableStateOf<String?>(null) }
+    var hasPermission by remember {
+        mutableStateOf(
+            androidx.core.content.ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
+                android.content.pm.PackageManager.PERMISSION_GRANTED,
+        )
+    }
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted -> hasPermission = granted }
+
+    LaunchedEffect(Unit) {
+        if (!hasPermission) {
+            permissionLauncher.launch(Manifest.permission.CAMERA)
+        }
+    }
+
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFF0A0F0C)),
@@ -703,27 +849,51 @@ fun ScanNrcScreen(
                         .clip(RoundedCornerShape(18.dp))
                         .background(Color(0xFF1B2C26)),
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp)
-                            .border(2.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(12.dp)),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            "align NRC inside frame",
-                            color = Color.White.copy(alpha = 0.6f),
-                            fontSize = 11.sp,
+                    if (!hasPermission) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(16.dp),
+                            verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            Text(
+                                "Camera permission required",
+                                color = Color.White.copy(alpha = 0.8f),
+                                fontSize = 12.sp,
+                            )
+                            GlButton(
+                                text = "Grant permission",
+                                onClick = { permissionLauncher.launch(Manifest.permission.CAMERA) },
+                                variant = GlButtonVariant.Outline,
+                                size = GlButtonSize.Sm,
+                                modifier = Modifier.padding(top = 10.dp),
+                            )
+                        }
+                    } else {
+                        NrcCameraPreview(
+                            onScan = { detectedNrc = it },
+                            modifier = Modifier.fillMaxSize(),
+                            active = detectedNrc == null,
                         )
                     }
-                    Text(
-                        "224018/61/1",
-                        color = Color.White.copy(alpha = 0.5f),
-                        fontSize = 9.sp,
+                    Box(
                         modifier = Modifier
-                            .align(Alignment.BottomStart)
-                            .padding(18.dp),
+                            .matchParentSize()
+                            .padding(16.dp)
+                            .border(2.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(12.dp)),
                     )
+                    if (detectedNrc != null) {
+                        Text(
+                            detectedNrc!!,
+                            color = Color.White,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier
+                                .align(Alignment.BottomStart)
+                                .padding(18.dp),
+                        )
+                    }
                 }
             }
             Column(Modifier.padding(horizontal = 28.dp, vertical = 20.dp)) {
@@ -734,17 +904,41 @@ fun ScanNrcScreen(
                         .background(Color.White.copy(alpha = 0.08f))
                         .padding(14.dp),
                 ) {
-                    Text("Detected · 224018/61/1", color = c.gold, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    Text("Mary Phiri · F · 14 Jun 1986", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp))
-                    Text("Confidence 96% · Eastern Province", color = Color.White.copy(alpha = 0.7f), fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
+                    if (detectedNrc != null) {
+                        Text(
+                            "Detected · $detectedNrc",
+                            color = c.gold,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        Text(
+                            "Confirm to autofill the NRC field",
+                            color = Color.White.copy(alpha = 0.7f),
+                            fontSize = 11.sp,
+                            modifier = Modifier.padding(top = 4.dp),
+                        )
+                    } else {
+                        Text(
+                            "Scanning…",
+                            color = Color.White.copy(alpha = 0.7f),
+                            fontSize = 12.sp,
+                        )
+                        Text(
+                            "Align the NRC or passport number within the frame",
+                            color = Color.White.copy(alpha = 0.5f),
+                            fontSize = 11.sp,
+                            modifier = Modifier.padding(top = 4.dp),
+                        )
+                    }
                 }
                 Spacer(Modifier.height(14.dp))
                 GlButton(
                     text = "Use this ID",
                     onClick = {
-                        viewModel.applyScannedIdentity("224018/61/1", "Mary Phiri", "Female", "14 / 06 / 1986")
+                        detectedNrc?.let { viewModel.applyScannedNrc(it) }
                         onUseId()
                     },
+                    enabled = detectedNrc != null,
                 )
                 GlButton(
                     text = "Enter manually",

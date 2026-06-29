@@ -49,7 +49,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.resume
-import zm.co.tbz.goldenleaf.ui.components.ErrorText
+import zm.co.tbz.goldenleaf.ui.scan.IdDocumentScanning
 import zm.co.tbz.goldenleaf.ui.components.GlAccent
 import zm.co.tbz.goldenleaf.ui.components.GlBanner
 import zm.co.tbz.goldenleaf.ui.components.GlButton
@@ -65,8 +65,7 @@ import zm.co.tbz.goldenleaf.ui.components.GlTextField
 import zm.co.tbz.goldenleaf.ui.components.GlTone
 import zm.co.tbz.goldenleaf.ui.components.NrcScanButton
 import zm.co.tbz.goldenleaf.ui.components.glColors
-import zm.co.tbz.goldenleaf.ui.scan.DocumentScanner
-import zm.co.tbz.goldenleaf.ui.scan.ScannedImageStore
+import zm.co.tbz.goldenleaf.ui.components.ErrorText
 
 @Composable
 fun NewGrowerRegistrationScreen(
@@ -166,16 +165,10 @@ private fun PersonalDetailsStep(
         }
         scanningTarget = target
         scope.launch {
-            val scannedPath = withContext(Dispatchers.Default) {
-                runCatching {
-                    val bitmap = ScannedImageStore.loadBitmap(context, uri) ?: return@runCatching null
-                    val scanned = DocumentScanner.scanDocument(bitmap)
-                    ScannedImageStore.save(context, scanned, target).toString()
-                }.getOrNull()
-            } ?: uri.toString()
+            val scannedPath = IdDocumentScanning.processPick(context, uri, target)
             when (target) {
-                "front" -> onPersonalChange(personal.copy(idFrontPath = scannedPath))
-                "back" -> onPersonalChange(personal.copy(idBackPath = scannedPath))
+                IdDocumentScanning.TARGET_ID_FRONT -> onPersonalChange(personal.copy(idFrontPath = scannedPath))
+                IdDocumentScanning.TARGET_ID_BACK -> onPersonalChange(personal.copy(idBackPath = scannedPath))
             }
             scanningTarget = null
         }
@@ -427,8 +420,34 @@ fun GrowerCorrectionScreen(
     val uiState by viewModel.uiState.collectAsState()
     val personal = uiState.personal
     val c = glColors()
-    val name = grower?.let { "${it.first_name} ${it.last_name}" } ?: "Mary Phiri"
-    val tbzId = grower?.tbz_id ?: "TBZ-2024-04412"
+    val name = grower?.let { listOfNotNull(it.first_name, it.middle_name, it.last_name).joinToString(" ") } ?: "Grower"
+    val tbzId = grower?.tbz_id ?: grower?.nrc_number ?: localId.take(12)
+    val correctionReason = grower?.correction_reason
+    val correctionDate = grower?.correction_requested_at
+    val correctionReviewer = grower?.correction_reviewer_name
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var photoTarget by remember { mutableStateOf<String?>(null) }
+    var scanningTarget by remember { mutableStateOf<String?>(null) }
+    val photoPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia(),
+    ) { uri ->
+        val target = photoTarget
+        photoTarget = null
+        if (uri == null || target == null) return@rememberLauncherForActivityResult
+        scanningTarget = target
+        scope.launch {
+            val scannedPath = IdDocumentScanning.processPick(context, uri, target)
+            viewModel.updatePersonal {
+                when (target) {
+                    IdDocumentScanning.TARGET_ID_FRONT -> it.copy(idFrontPath = scannedPath)
+                    IdDocumentScanning.TARGET_ID_BACK -> it.copy(idBackPath = scannedPath)
+                    else -> it
+                }
+            }
+            scanningTarget = null
+        }
+    }
 
     LaunchedEffect(grower?.local_id) {
         grower?.let { viewModel.loadPersonalFromGrower(it) }
@@ -443,7 +462,7 @@ fun GrowerCorrectionScreen(
             ) {
                 GlButton(
                     text = if (uiState.correctionDraftSaved) "Saved locally" else "Save draft",
-                    onClick = { viewModel.setCorrectionDraftSaved(true) },
+                    onClick = { viewModel.saveCorrectionDraft(localId) },
                     variant = GlButtonVariant.Outline,
                     fillMaxWidth = false,
                     leadingIcon = "check",
@@ -460,7 +479,8 @@ fun GrowerCorrectionScreen(
             }
         },
     ) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState())) {
+        Column(Modifier.fillMaxSize().padding(padding)) {
+            Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
             GlScreenHeader(title = "Fix & resubmit", subtitle = "Returned for correction", onBack = onBack)
             GlCard(
                 contentPadding = 14.dp,
@@ -481,11 +501,15 @@ fun GrowerCorrectionScreen(
                     Column {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                             GlPill(text = "Returned for correction", tone = GlTone.Returned, size = GlPillSize.Sm)
-                            Text("09 May 2026", color = c.textMuted, fontSize = 11.sp)
+                            correctionDate?.let {
+                                Text(it, color = c.textMuted, fontSize = 11.sp)
+                            }
                         }
-                        Text("Reviewer: D. Mwansa", color = c.text, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 6.dp))
+                        correctionReviewer?.let {
+                            Text("Reviewer: $it", color = c.text, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 6.dp))
+                        }
                         Text(
-                            "\"NRC number does not match the uploaded ID document. Please correct the NRC and re-upload the ID front photo.\"",
+                            correctionReason ?: "Please review and correct the flagged fields before resubmitting.",
                             color = c.text,
                             fontSize = 13.sp,
                             lineHeight = 19.sp,
@@ -513,19 +537,19 @@ fun GrowerCorrectionScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 GlTextField(
-                    value = personal.nrcNumber.ifBlank { "224018/61/1" },
+                    value = personal.nrcNumber,
                     onValueChange = { v -> viewModel.updatePersonal { it.copy(nrcNumber = v) } },
                     label = "NRC / Passport / PACRA",
                     required = true,
                     leadingIcon = "badge",
-                    helper = "Flagged by reviewer — verify against original document",
-                    error = "Check NRC number",
+                    helper = if (correctionReason != null) "Flagged by reviewer — verify against original document" else null,
+                    error = uiState.personalErrors["nrcNumber"],
                 )
-                GlTextField(personal.firstName.ifBlank { "Mary" }, { v -> viewModel.updatePersonal { it.copy(firstName = v) } }, label = "First name", required = true)
-                GlTextField(personal.lastName.ifBlank { "Phiri" }, { v -> viewModel.updatePersonal { it.copy(lastName = v) } }, label = "Last name", required = true)
+                GlTextField(personal.firstName, { v -> viewModel.updatePersonal { it.copy(firstName = v) } }, label = "First name", required = true, error = uiState.personalErrors["firstName"])
+                GlTextField(personal.lastName, { v -> viewModel.updatePersonal { it.copy(lastName = v) } }, label = "Last name", required = true, error = uiState.personalErrors["lastName"])
                 GlDropdownField("Gender", listOf("FEMALE" to "Female", "MALE" to "Male"), personal.sex, { v -> viewModel.updatePersonal { it.copy(sex = v) } })
-                GlTextField(personal.dateOfBirth.ifBlank { "14 / 06 / 1986" }, { v -> viewModel.updatePersonal { it.copy(dateOfBirth = v) } }, label = "Date of birth", leadingIcon = "calendar")
-                GlTextField(personal.localPhone.ifBlank { "+260 977 421 089" }, { v -> viewModel.updatePersonal { it.copy(localPhone = v) } }, label = "Phone", leadingIcon = "phone")
+                GlTextField(personal.dateOfBirth, { v -> viewModel.updatePersonal { it.copy(dateOfBirth = v) } }, label = "Date of birth", leadingIcon = "calendar")
+                GlTextField(personal.localPhone, { v -> viewModel.updatePersonal { it.copy(localPhone = v) } }, label = "Phone", leadingIcon = "phone")
             }
             GlSectionHeader(title = "Re-upload ID documents", modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp))
             Column(Modifier.padding(horizontal = 20.dp, vertical = 4.dp)) {
@@ -536,7 +560,12 @@ fun GrowerCorrectionScreen(
                     icon = "camera",
                 )
                 Row(Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    listOf("NRC · Front" to true, "NRC · Back" to false).forEach { (label, flagged) ->
+                    listOf(
+                        Triple("NRC · Front", IdDocumentScanning.TARGET_ID_FRONT, personal.idFrontPath != null),
+                        Triple("NRC · Back", IdDocumentScanning.TARGET_ID_BACK, personal.idBackPath != null),
+                    ).forEach { (label, target, captured) ->
+                        val processing = scanningTarget == target
+                        val flagged = target == IdDocumentScanning.TARGET_ID_FRONT && correctionReason != null
                         GlCard(
                             contentPadding = 0.dp,
                             modifier = Modifier
@@ -546,19 +575,33 @@ fun GrowerCorrectionScreen(
                                     color = if (flagged) c.gold else c.outlineSoft,
                                     shape = RoundedCornerShape(16.dp),
                                 ),
-                            onClick = {},
+                            onClick = {
+                                if (processing) return@GlCard
+                                photoTarget = target
+                                photoPicker.launch(
+                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
+                                )
+                            },
                         ) {
-                            GlImageSlot(label = if (flagged) "retake required" else "", height = 100.dp, rounded = 0.dp)
+                            GlImageSlot(
+                                label = when {
+                                    processing -> "Scanning…"
+                                    !captured -> if (flagged) "retake required" else "tap to capture"
+                                    else -> ""
+                                },
+                                height = 100.dp,
+                                rounded = 0.dp,
+                            )
                             Row(
                                 Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Text(label, color = c.text, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                if (flagged) {
-                                    GlPill(text = "Flagged", tone = GlTone.Warning, size = GlPillSize.Sm, leadingIcon = "warning")
-                                } else {
-                                    GlIcon("check-circle", size = 18.dp, tint = c.success)
+                                when {
+                                    processing -> GlPill(text = "Scanning", tone = GlTone.Warning, size = GlPillSize.Sm)
+                                    flagged && !captured -> GlPill(text = "Flagged", tone = GlTone.Warning, size = GlPillSize.Sm, leadingIcon = "warning")
+                                    captured -> GlIcon("check-circle", size = 18.dp, tint = c.success)
                                 }
                             }
                         }
@@ -576,6 +619,7 @@ fun GrowerCorrectionScreen(
             }
             uiState.saveError?.let { ErrorText(it, Modifier.padding(horizontal = 20.dp)) }
             Spacer(Modifier.height(8.dp))
+            }
         }
     }
 }

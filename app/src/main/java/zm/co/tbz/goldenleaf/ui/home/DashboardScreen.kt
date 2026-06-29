@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -346,7 +347,7 @@ private fun DashboardModuleIcon(
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .padding(top = (-4).dp, end = (-4).dp)
+                        .offset(x = 4.dp, y = (-4).dp)
                         .size(18.dp)
                         .clip(CircleShape)
                         .background(c.gold),

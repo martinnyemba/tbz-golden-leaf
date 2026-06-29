@@ -170,67 +170,78 @@ fun TbzNavHost(
         }
         navigation(
             route = Routes.REGISTRATION_WIZARD,
-            startDestination = "step-type",
+            startDestination = Routes.WIZARD_STEP_TYPE,
         ) {
-            composable("scan-id") {
+            composable(Routes.WIZARD_SCAN_ID) {
                 val vm = hiltViewModel<RegistrationViewModel>(navController.getBackStackEntry(Routes.REGISTRATION_WIZARD))
                 ScanNrcScreen(
                     onClose = { navController.popBackStack() },
                     onUseId = {
-                        navController.navigate(Routes.REGISTRATION_STEP_IDENTITY) {
-                            popUpTo(Routes.REGISTRATION_STEP_TYPE) { inclusive = false }
+                        navController.navigate(Routes.WIZARD_STEP_IDENTITY) {
+                            popUpTo(Routes.WIZARD_STEP_TYPE) { inclusive = false }
                         }
                     },
-                    onManualEntry = { navController.navigate(Routes.REGISTRATION_STEP_IDENTITY) },
+                    onManualEntry = { navController.navigate(Routes.WIZARD_STEP_IDENTITY) },
                     viewModel = vm,
                 )
             }
-            composable("step-type") {
+            composable(Routes.WIZARD_STEP_TYPE) {
                 val vm = hiltViewModel<RegistrationViewModel>(navController.getBackStackEntry(Routes.REGISTRATION_WIZARD))
                 RegistrationStepTypeScreen(
                     onBack = { navController.popBackStack(Routes.REGISTRATION, inclusive = false) },
-                    onContinue = { navController.navigate(Routes.REGISTRATION_STEP_IDENTITY) },
-                    onScanId = { navController.navigate(Routes.REGISTRATION_SCAN_ID) },
+                    onContinue = { navController.navigate(Routes.WIZARD_STEP_IDENTITY) },
+                    onScanId = { navController.navigate(Routes.WIZARD_SCAN_ID) },
                     viewModel = vm,
                 )
             }
-            composable("step-identity") {
+            composable(Routes.WIZARD_STEP_IDENTITY) {
                 val vm = hiltViewModel<RegistrationViewModel>(navController.getBackStackEntry(Routes.REGISTRATION_WIZARD))
                 RegistrationStepIdentityScreen(
                     onBack = { navController.popBackStack() },
-                    onContinue = { navController.navigate(Routes.REGISTRATION_STEP_FARM) },
+                    onContinue = {
+                        vm.continueFromIdentity {
+                            navController.navigate(Routes.WIZARD_STEP_FARM)
+                        }
+                    },
                     viewModel = vm,
                 )
             }
-            composable("step-farm") {
+            composable(Routes.WIZARD_STEP_FARM) {
                 val vm = hiltViewModel<RegistrationViewModel>(navController.getBackStackEntry(Routes.REGISTRATION_WIZARD))
                 RegistrationStepFarmScreen(
                     onBack = { navController.popBackStack() },
-                    onContinue = { navController.navigate(Routes.REGISTRATION_STEP_PHOTOS) },
+                    onContinue = {
+                        vm.continueFromFarm {
+                            navController.navigate(Routes.WIZARD_STEP_PHOTOS)
+                        }
+                    },
                     viewModel = vm,
                 )
             }
-            composable("step-photos") {
+            composable(Routes.WIZARD_STEP_PHOTOS) {
                 val vm = hiltViewModel<RegistrationViewModel>(navController.getBackStackEntry(Routes.REGISTRATION_WIZARD))
                 RegistrationStepPhotosScreen(
                     onBack = { navController.popBackStack() },
                     onSubmit = {
                         vm.submitRegistration {
-                            navController.navigate(Routes.REGISTRATION_SUCCESS) {
-                                popUpTo(Routes.REGISTRATION_STEP_TYPE) { inclusive = false }
+                            navController.navigate(Routes.WIZARD_SUCCESS) {
+                                popUpTo(Routes.WIZARD_STEP_TYPE) { inclusive = false }
                             }
                         }
                     },
                     viewModel = vm,
                 )
             }
-            composable("success") {
+            composable(Routes.WIZARD_SUCCESS) {
                 val vm = hiltViewModel<RegistrationViewModel>(navController.getBackStackEntry(Routes.REGISTRATION_WIZARD))
                 val lastId by vm.lastRegisteredId.collectAsState()
+                val uiState by vm.uiState.collectAsState()
+                val grower by vm.observeGrower(lastId.orEmpty()).collectAsState()
                 RegistrationSuccessScreen(
-                    provisionalId = "TBZ-2024-04412",
+                    growerName = uiState.lastRegisteredName ?: "Grower",
+                    provisionalId = grower?.tbz_id ?: grower?.nrc_number ?: lastId?.take(12) ?: "Pending sync",
                     onViewGrower = {
-                        navController.navigate(Routes.registrationDetail(lastId ?: "preview-1")) {
+                        navController.navigate(Routes.registrationDetail(lastId ?: return@RegistrationSuccessScreen)) {
                             popUpTo(Routes.REGISTRATION) { inclusive = false }
                         }
                     },

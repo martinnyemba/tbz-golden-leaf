@@ -55,7 +55,8 @@ interface TrmcsApi {
     suspend fun getGrowers(
         @Query("search") search: String? = null,
         @Query("status") status: String? = null,
-        @Query("updated_after") updatedAfter: String? = null
+        @Query("updated_after") updatedAfter: String? = null,
+        @Query("page") page: Int? = null,
     ): PagedResponse<GrowerDto>
 
     @GET("permits/transport-permits/")

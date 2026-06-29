@@ -20,6 +20,8 @@ class GoldenLeafApp : Application(), Configuration.Provider {
 
     override fun onCreate() {
         super.onCreate()
-        OpenCVLoader.initLocal()
+        if (!OpenCVLoader.initLocal()) {
+            android.util.Log.w("GoldenLeafApp", "OpenCV initLocal failed — document scan will fall back to original photos")
+        }
     }
 }

@@ -15,12 +15,27 @@ data class PagedResponse<T>(
 data class GrowerDto(
     val id: String,
     val tbz_id: String? = null,
+    val grower_type: String? = null,
     val first_name: String,
+    val middle_name: String? = null,
     val last_name: String,
     val nrc_number: String? = null,
-    val status: String,
+    val sex: String? = null,
+    val date_of_birth: String? = null,
+    val category: String? = null,
+    val phone_number: String? = null,
+    val email: String? = null,
+    val address: String? = null,
+    val town_or_village: String? = null,
     val province: String? = null,
-    val district: String? = null
+    val district: String? = null,
+    val gps_latitude: Double? = null,
+    val gps_longitude: Double? = null,
+    val status: String,
+    val correction_reason: String? = null,
+    val correction_requested_at: String? = null,
+    val correction_reviewer_name: String? = null,
+    val updated_at: String? = null,
 )
 
 @Serializable
