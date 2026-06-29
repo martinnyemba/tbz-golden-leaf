@@ -343,7 +343,7 @@ private fun GrowerCard(grower: GrowerEntity, onClick: () -> Unit) {
 private fun RegistrationRow(registration: GrowerRegistrationEntity) {
     Row(
         Modifier.fillMaxWidth().padding(vertical = 6.dp),
-        horizontalAlignment = Alignment.CenterVertically,
+        verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Column {
@@ -358,7 +358,7 @@ private fun RegistrationRow(registration: GrowerRegistrationEntity) {
 private fun GrowerEditRow(edit: GrowerEditEntity) {
     Row(
         Modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterVertically,
+        verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Column {
