@@ -5,14 +5,28 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import zm.co.tbz.goldenleaf.ui.components.GlAvatar
+import zm.co.tbz.goldenleaf.ui.components.GlPill
+import zm.co.tbz.goldenleaf.ui.components.GlPillSize
+import zm.co.tbz.goldenleaf.ui.components.GlImageSlot
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,7 +40,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -406,48 +419,163 @@ fun GrowerEditScreen(
 @Composable
 fun GrowerCorrectionScreen(
     localId: String,
+    onBack: (() -> Unit)? = null,
     onDone: () -> Unit,
     viewModel: RegistrationViewModel = hiltViewModel(),
 ) {
     val grower by viewModel.observeGrower(localId).collectAsState()
     val uiState by viewModel.uiState.collectAsState()
-    val provinces by viewModel.provinces.collectAsState()
     val personal = uiState.personal
-    val districts by viewModel.districtsForProvince(personal.provinceId).collectAsState(initial = emptyList())
     val c = glColors()
+    val name = grower?.let { "${it.first_name} ${it.last_name}" } ?: "Mary Phiri"
+    val tbzId = grower?.tbz_id ?: "TBZ-2024-04412"
 
     LaunchedEffect(grower?.local_id) {
         grower?.let { viewModel.loadPersonalFromGrower(it) }
     }
 
-    Scaffold(containerColor = c.bg) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding)) {
-            GlScreenHeader(title = "Fix & resubmit")
-            ScrollableFormColumn {
-                GlBanner(
-                    title = "Returned for correction",
-                    subtitle = "Update the flagged fields below and resubmit for review.",
-                    tone = GlTone.Gold,
-                    icon = "warning",
-                )
-                GlTextField(personal.firstName, { v -> viewModel.updatePersonal { it.copy(firstName = v) } }, label = "First name")
-                GlTextField(personal.lastName, { v -> viewModel.updatePersonal { it.copy(lastName = v) } }, label = "Last name")
-                GlTextField(personal.nrcNumber, { v -> viewModel.updatePersonal { it.copy(nrcNumber = v) } }, label = "NRC")
-                GlTextField(personal.address, { v -> viewModel.updatePersonal { it.copy(address = v) } }, label = "Address")
-                GlDropdownField("Province", provinces.map { it.id to it.name }, personal.provinceId, { v ->
-                    viewModel.updatePersonal { it.copy(provinceId = v, districtId = "") }
-                })
-                GlDropdownField("District", districts.map { it.id to it.name }, personal.districtId, { v ->
-                    viewModel.updatePersonal { it.copy(districtId = v) }
-                })
-                uiState.saveError?.let { ErrorText(it) }
+    Scaffold(
+        containerColor = c.bg,
+        bottomBar = {
+            Row(
+                Modifier.fillMaxWidth().background(c.surface).padding(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
                 GlButton(
-                    text = if (uiState.isSaving) "Submitting…" else "Save & resubmit",
+                    text = if (uiState.correctionDraftSaved) "Saved locally" else "Save draft",
+                    onClick = { viewModel.setCorrectionDraftSaved(true) },
+                    variant = GlButtonVariant.Outline,
+                    fillMaxWidth = false,
+                    leadingIcon = "check",
+                    modifier = Modifier.weight(1f),
+                )
+                GlButton(
+                    text = if (uiState.isSaving) "Submitting…" else "Fix & Resubmit",
                     onClick = { viewModel.resubmitCorrection(localId, onDone) },
-                    variant = GlButtonVariant.Gold,
                     enabled = !uiState.isSaving,
+                    fillMaxWidth = false,
+                    leadingIcon = "cloud-up",
+                    modifier = Modifier.weight(1f),
                 )
             }
+        },
+    ) { padding ->
+        Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState())) {
+            GlScreenHeader(title = "Fix & resubmit", subtitle = "Returned for correction", onBack = onBack)
+            GlCard(
+                contentPadding = 14.dp,
+                modifier = Modifier
+                    .padding(horizontal = 20.dp, vertical = 8.dp)
+                    .border(1.5.dp, c.gold, RoundedCornerShape(16.dp)),
+            ) {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(c.gold),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        GlIcon("warning", size = 18.dp, tint = c.text)
+                    }
+                    Column {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            GlPill(text = "Returned for correction", tone = GlTone.Returned, size = GlPillSize.Sm)
+                            Text("09 May 2026", color = c.textMuted, fontSize = 11.sp)
+                        }
+                        Text("Reviewer: D. Mwansa", color = c.text, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 6.dp))
+                        Text(
+                            "\"NRC number does not match the uploaded ID document. Please correct the NRC and re-upload the ID front photo.\"",
+                            color = c.text,
+                            fontSize = 13.sp,
+                            lineHeight = 19.sp,
+                            modifier = Modifier.padding(top = 4.dp),
+                        )
+                    }
+                }
+            }
+            GlCard(
+                contentPadding = 12.dp,
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
+            ) {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    GlAvatar(name = name, size = 40.dp)
+                    Column(Modifier.weight(1f)) {
+                        Text(name, color = c.text, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                        Text(tbzId, color = c.textMuted, fontSize = 11.sp, fontFamily = FontFamily.Monospace)
+                    }
+                    GlPill(text = "Draft correction", tone = GlTone.Returned, size = GlPillSize.Sm)
+                }
+            }
+            GlSectionHeader(title = "Correction fields", modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp))
+            Column(
+                Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                GlTextField(
+                    value = personal.nrcNumber.ifBlank { "224018/61/1" },
+                    onValueChange = { v -> viewModel.updatePersonal { it.copy(nrcNumber = v) } },
+                    label = "NRC / Passport / PACRA",
+                    required = true,
+                    leadingIcon = "badge",
+                    helper = "Flagged by reviewer — verify against original document",
+                    error = "Check NRC number",
+                )
+                GlTextField(personal.firstName.ifBlank { "Mary" }, { v -> viewModel.updatePersonal { it.copy(firstName = v) } }, label = "First name", required = true)
+                GlTextField(personal.lastName.ifBlank { "Phiri" }, { v -> viewModel.updatePersonal { it.copy(lastName = v) } }, label = "Last name", required = true)
+                GlDropdownField("Gender", listOf("FEMALE" to "Female", "MALE" to "Male"), personal.sex, { v -> viewModel.updatePersonal { it.copy(sex = v) } })
+                GlTextField(personal.dateOfBirth.ifBlank { "14 / 06 / 1986" }, { v -> viewModel.updatePersonal { it.copy(dateOfBirth = v) } }, label = "Date of birth", leadingIcon = "calendar")
+                GlTextField(personal.localPhone.ifBlank { "+260 977 421 089" }, { v -> viewModel.updatePersonal { it.copy(localPhone = v) } }, label = "Phone", leadingIcon = "phone")
+            }
+            GlSectionHeader(title = "Re-upload ID documents", modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp))
+            Column(Modifier.padding(horizontal = 20.dp, vertical = 4.dp)) {
+                GlBanner(
+                    title = "Reviewer flagged ID photo",
+                    subtitle = "Re-photograph the NRC front clearly in good light.",
+                    tone = GlTone.Warning,
+                    icon = "camera",
+                )
+                Row(Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    listOf("NRC · Front" to true, "NRC · Back" to false).forEach { (label, flagged) ->
+                        GlCard(
+                            contentPadding = 0.dp,
+                            modifier = Modifier
+                                .weight(1f)
+                                .border(
+                                    width = if (flagged) 2.dp else 1.dp,
+                                    color = if (flagged) c.gold else c.outlineSoft,
+                                    shape = RoundedCornerShape(16.dp),
+                                ),
+                            onClick = {},
+                        ) {
+                            GlImageSlot(label = if (flagged) "retake required" else "", height = 100.dp, rounded = 0.dp)
+                            Row(
+                                Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(label, color = c.text, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                if (flagged) {
+                                    GlPill(text = "Flagged", tone = GlTone.Warning, size = GlPillSize.Sm, leadingIcon = "warning")
+                                } else {
+                                    GlIcon("check-circle", size = 18.dp, tint = c.success)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if (uiState.correctionDraftSaved) {
+                GlBanner(
+                    title = "Correction saved locally",
+                    subtitle = "Tap 'Fix & Resubmit' when ready to send for review.",
+                    tone = GlTone.Success,
+                    icon = "check-circle",
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
+                )
+            }
+            uiState.saveError?.let { ErrorText(it, Modifier.padding(horizontal = 20.dp)) }
+            Spacer(Modifier.height(8.dp))
         }
     }
 }

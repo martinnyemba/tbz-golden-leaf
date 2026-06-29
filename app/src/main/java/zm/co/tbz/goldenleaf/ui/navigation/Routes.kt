@@ -21,6 +21,13 @@ object Routes {
 
     // Registration
     const val REGISTRATION = "registration"
+    const val REGISTRATION_WIZARD = "registration/wizard"
+    const val REGISTRATION_SCAN_ID = "registration/wizard/scan-id"
+    const val REGISTRATION_STEP_TYPE = "registration/wizard/step-type"
+    const val REGISTRATION_STEP_IDENTITY = "registration/wizard/step-identity"
+    const val REGISTRATION_STEP_FARM = "registration/wizard/step-farm"
+    const val REGISTRATION_STEP_PHOTOS = "registration/wizard/step-photos"
+    const val REGISTRATION_SUCCESS = "registration/wizard/success"
     const val REGISTRATION_NEW = "registration/new"
     const val REGISTRATION_LIST = "registration/list"
     const val REGISTRATION_LOCAL = "registration/local"

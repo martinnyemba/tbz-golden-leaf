@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.compose.ui.window.DialogProperties
+import androidx.navigation.compose.navigation
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -74,8 +75,13 @@ import zm.co.tbz.goldenleaf.ui.registration.GrowerEditScreen
 import zm.co.tbz.goldenleaf.ui.registration.GrowerListScreen
 import zm.co.tbz.goldenleaf.ui.registration.GrowerUpdatesScreen
 import zm.co.tbz.goldenleaf.ui.registration.LocalRegistrationsScreen
-import zm.co.tbz.goldenleaf.ui.registration.NewGrowerRegistrationScreen
-import zm.co.tbz.goldenleaf.ui.registration.RegistrationHubScreen
+import zm.co.tbz.goldenleaf.ui.registration.RegistrationStepFarmScreen
+import zm.co.tbz.goldenleaf.ui.registration.RegistrationStepIdentityScreen
+import zm.co.tbz.goldenleaf.ui.registration.RegistrationStepPhotosScreen
+import zm.co.tbz.goldenleaf.ui.registration.RegistrationStepTypeScreen
+import zm.co.tbz.goldenleaf.ui.registration.RegistrationSuccessScreen
+import zm.co.tbz.goldenleaf.ui.registration.RegistrationViewModel
+import zm.co.tbz.goldenleaf.ui.registration.ScanNrcScreen
 import zm.co.tbz.goldenleaf.ui.sync.SyncSettingsScreen
 
 @Composable
@@ -150,25 +156,105 @@ fun TbzNavHost(
             NotificationsScreen(onBack = { navController.popBackStack() })
         }
         composable(Routes.REGISTRATION) {
-            RegistrationHubScreen(
-                onNewRegistration = { navController.navigate(Routes.REGISTRATION_NEW) },
-                onGrowerList = { navController.navigate(Routes.REGISTRATION_LIST) },
-                onLocalRegistrations = { navController.navigate(Routes.REGISTRATION_LOCAL) },
-                onGrowerUpdates = { navController.navigate(Routes.GROWER_UPDATES) },
-                onCorrections = { navController.navigate(Routes.CORRECTIONS) },
+            GrowerListScreen(
+                onBack = { navController.popBackStack() },
+                onNewRegistration = {
+                    navController.navigate(Routes.REGISTRATION_WIZARD) {
+                        launchSingleTop = true
+                    }
+                },
+                onScanId = { navController.navigate(Routes.REGISTRATION_SCAN_ID) },
+                onOpenDetail = { navController.navigate(Routes.registrationDetail(it)) },
+                onOpenUpdates = { navController.navigate(Routes.GROWER_UPDATES) },
             )
         }
-        composable(Routes.REGISTRATION_NEW) {
-            NewGrowerRegistrationScreen(onSaved = { navController.popBackStack() })
+        navigation(
+            route = Routes.REGISTRATION_WIZARD,
+            startDestination = "step-type",
+        ) {
+            composable("scan-id") {
+                val vm = hiltViewModel<RegistrationViewModel>(navController.getBackStackEntry(Routes.REGISTRATION_WIZARD))
+                ScanNrcScreen(
+                    onClose = { navController.popBackStack() },
+                    onUseId = {
+                        navController.navigate(Routes.REGISTRATION_STEP_IDENTITY) {
+                            popUpTo(Routes.REGISTRATION_STEP_TYPE) { inclusive = false }
+                        }
+                    },
+                    onManualEntry = { navController.navigate(Routes.REGISTRATION_STEP_IDENTITY) },
+                    viewModel = vm,
+                )
+            }
+            composable("step-type") {
+                val vm = hiltViewModel<RegistrationViewModel>(navController.getBackStackEntry(Routes.REGISTRATION_WIZARD))
+                RegistrationStepTypeScreen(
+                    onBack = { navController.popBackStack(Routes.REGISTRATION, inclusive = false) },
+                    onContinue = { navController.navigate(Routes.REGISTRATION_STEP_IDENTITY) },
+                    onScanId = { navController.navigate(Routes.REGISTRATION_SCAN_ID) },
+                    viewModel = vm,
+                )
+            }
+            composable("step-identity") {
+                val vm = hiltViewModel<RegistrationViewModel>(navController.getBackStackEntry(Routes.REGISTRATION_WIZARD))
+                RegistrationStepIdentityScreen(
+                    onBack = { navController.popBackStack() },
+                    onContinue = { navController.navigate(Routes.REGISTRATION_STEP_FARM) },
+                    viewModel = vm,
+                )
+            }
+            composable("step-farm") {
+                val vm = hiltViewModel<RegistrationViewModel>(navController.getBackStackEntry(Routes.REGISTRATION_WIZARD))
+                RegistrationStepFarmScreen(
+                    onBack = { navController.popBackStack() },
+                    onContinue = { navController.navigate(Routes.REGISTRATION_STEP_PHOTOS) },
+                    viewModel = vm,
+                )
+            }
+            composable("step-photos") {
+                val vm = hiltViewModel<RegistrationViewModel>(navController.getBackStackEntry(Routes.REGISTRATION_WIZARD))
+                RegistrationStepPhotosScreen(
+                    onBack = { navController.popBackStack() },
+                    onSubmit = {
+                        vm.submitRegistration {
+                            navController.navigate(Routes.REGISTRATION_SUCCESS) {
+                                popUpTo(Routes.REGISTRATION_STEP_TYPE) { inclusive = false }
+                            }
+                        }
+                    },
+                    viewModel = vm,
+                )
+            }
+            composable("success") {
+                val vm = hiltViewModel<RegistrationViewModel>(navController.getBackStackEntry(Routes.REGISTRATION_WIZARD))
+                val lastId by vm.lastRegisteredId.collectAsState()
+                RegistrationSuccessScreen(
+                    provisionalId = "TBZ-2024-04412",
+                    onViewGrower = {
+                        navController.navigate(Routes.registrationDetail(lastId ?: "preview-1")) {
+                            popUpTo(Routes.REGISTRATION) { inclusive = false }
+                        }
+                    },
+                    onBackToList = {
+                        navController.popBackStack(Routes.REGISTRATION, inclusive = false)
+                    },
+                )
+            }
         }
         composable(Routes.REGISTRATION_LIST) {
-            GrowerListScreen(onOpenDetail = { navController.navigate(Routes.registrationDetail(it)) })
+            GrowerListScreen(
+                onOpenDetail = { navController.navigate(Routes.registrationDetail(it)) },
+                onNewRegistration = { navController.navigate(Routes.REGISTRATION_WIZARD) },
+                onScanId = { navController.navigate(Routes.REGISTRATION_SCAN_ID) },
+            )
         }
         composable(Routes.REGISTRATION_LOCAL) {
             LocalRegistrationsScreen(onOpenDetail = { navController.navigate(Routes.registrationDetail(it)) })
         }
         composable(Routes.GROWER_UPDATES) {
-            GrowerUpdatesScreen(onOpenGrower = { navController.navigate(Routes.registrationDetail(it)) })
+            GrowerUpdatesScreen(
+                onBack = { navController.popBackStack() },
+                onOpenGrower = { navController.navigate(Routes.registrationDetail(it)) },
+            )
         }
         composable(
             route = Routes.REGISTRATION_DETAIL,
@@ -177,9 +263,12 @@ fun TbzNavHost(
             val localId = entry.arguments?.getString("localId").orEmpty()
             GrowerDetailScreen(
                 localId = localId,
+                onBack = { navController.popBackStack() },
                 onEdit = { navController.navigate(Routes.registrationEdit(it)) },
                 onCorrection = { navController.navigate(Routes.registrationCorrection(it)) },
                 onAddCrop = { navController.navigate(Routes.registrationCrop(it)) },
+                onNewPermit = { navController.navigate(Routes.PERMITS) },
+                onNewInspection = { navController.navigate(Routes.INSPECTION) },
             )
         }
         composable(
@@ -197,6 +286,7 @@ fun TbzNavHost(
         ) { entry ->
             GrowerCorrectionScreen(
                 localId = entry.arguments?.getString("localId").orEmpty(),
+                onBack = { navController.popBackStack() },
                 onDone = { navController.popBackStack() },
             )
         }

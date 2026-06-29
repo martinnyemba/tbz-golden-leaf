@@ -949,8 +949,15 @@ fun GlSyncChip(status: String, modifier: Modifier = Modifier, count: Int = 0) {
 // STEPPER
 // ─────────────────────────────────────────────────────────────────────────────
 @Composable
-fun GlStepper(step: Int, total: Int, modifier: Modifier = Modifier, label: String? = null) {
+fun GlStepper(
+    step: Int,
+    total: Int,
+    modifier: Modifier = Modifier,
+    label: String? = null,
+    stepLabels: List<String>? = null,
+) {
     val c = glColors()
+    val activeLabel = stepLabels?.getOrNull(step - 1) ?: label
     Column(modifier = modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             repeat(total) { i ->
@@ -958,7 +965,7 @@ fun GlStepper(step: Int, total: Int, modifier: Modifier = Modifier, label: Strin
                     modifier = Modifier
                         .weight(1f)
                         .height(4.dp)
-                        .clip(CircleShape)
+                        .clip(RoundedCornerShape(2.dp))
                         .background(if (i < step) c.primary else c.outline),
                 )
             }
@@ -966,11 +973,60 @@ fun GlStepper(step: Int, total: Int, modifier: Modifier = Modifier, label: Strin
         Spacer(Modifier.height(8.dp))
         Text(
             buildString {
-                append("STEP $step OF $total")
-                if (label != null) append(" · ${label.uppercase()}")
+                append("Step $step of $total")
+                if (activeLabel != null) append(" · $activeLabel")
             },
-            color = c.textMuted, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.5.sp,
+            color = c.textMuted,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.SemiBold,
+            letterSpacing = 0.5.sp,
         )
+    }
+}
+
+@Composable
+fun GlImageSlot(
+    label: String = "photo",
+    height: androidx.compose.ui.unit.Dp = 120.dp,
+    modifier: Modifier = Modifier,
+    rounded: androidx.compose.ui.unit.Dp = 16.dp,
+) {
+    val c = glColors()
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(height)
+            .clip(RoundedCornerShape(rounded))
+            .background(c.surfaceAlt)
+            .border(1.dp, c.outline, RoundedCornerShape(rounded)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            label,
+            color = c.textMuted,
+            fontSize = 11.sp,
+            fontFamily = Mono,
+            letterSpacing = 0.3.sp,
+        )
+    }
+}
+
+@Composable
+fun GlFab(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    icon: String = "plus",
+) {
+    val c = glColors()
+    Box(
+        modifier = modifier
+            .size(56.dp)
+            .clip(CircleShape)
+            .background(c.primary)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        GlIcon(icon, size = 22.dp, tint = Color.White)
     }
 }
 

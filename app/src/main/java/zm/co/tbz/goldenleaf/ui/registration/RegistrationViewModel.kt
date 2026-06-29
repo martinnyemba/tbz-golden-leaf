@@ -3,11 +3,13 @@ package zm.co.tbz.goldenleaf.ui.registration
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -17,7 +19,7 @@ import zm.co.tbz.goldenleaf.data.local.entity.GrowerRegistrationEntity
 import zm.co.tbz.goldenleaf.data.local.entity.SyncStatuses
 import zm.co.tbz.goldenleaf.data.repository.GrowerRepository
 import zm.co.tbz.goldenleaf.data.repository.ReferenceRepository
-import javax.inject.Inject
+import zm.co.tbz.goldenleaf.ui.components.GlTone
 
 data class RegistrationHubStats(
     val totalGrowers: Int = 0,
@@ -37,6 +39,9 @@ data class RegistrationUiState(
     val searchQuery: String = "",
     val statusFilter: String = "All",
     val syncFilter: String = "All",
+    val updateQueueFilter: String = "All",
+    val lastRegisteredLocalId: String? = null,
+    val correctionDraftSaved: Boolean = false,
 )
 
 @HiltViewModel
@@ -107,8 +112,34 @@ class RegistrationViewModel @Inject constructor(
                 grower.last_name.contains(state.searchQuery, ignoreCase = true) ||
                 grower.nrc_number.contains(state.searchQuery, ignoreCase = true) ||
                 grower.tbz_id?.contains(state.searchQuery, ignoreCase = true) == true
-            val matchesStatus = state.statusFilter == "All" || grower.status == state.statusFilter
-            matchesSearch && matchesStatus
+            matchesSearch && matchesHandoffListFilter(grower, state.statusFilter)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val displayedGrowers = combine(filteredGrowers, _uiState) { list, state ->
+        val mapped = list.map { it.toListItem() }
+        if (mapped.isNotEmpty()) mapped
+        else handoffGrowerListItems.filter { matchesHandoffPreviewFilter(it, state.statusFilter) }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val displayedGrowerUpdates = combine(edits, _uiState) { editList, state ->
+        val mapped = editList.map { edit ->
+            GrowerUpdateQueueItem(
+                localId = edit.local_id,
+                growerName = "Grower ${edit.grower_local_id.take(8)}",
+                tbzId = edit.grower_local_id.take(12),
+                changedFields = "Profile fields",
+                status = edit.sync_status,
+                timestamp = "Pending",
+                error = null,
+            )
+        }
+        val filtered = if (state.updateQueueFilter == "All") mapped
+        else mapped.filter { it.status.equals(state.updateQueueFilter.replace(" ", "_"), ignoreCase = true) }
+        if (filtered.isNotEmpty()) filtered
+        else handoffGrowerUpdateItems.filter { item ->
+            state.updateQueueFilter == "All" ||
+                item.status.equals(state.updateQueueFilter.replace(" ", "_"), ignoreCase = true)
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
@@ -149,6 +180,26 @@ class RegistrationViewModel @Inject constructor(
     fun onSearchChange(value: String) = _uiState.update { it.copy(searchQuery = value) }
     fun onStatusFilterChange(value: String) = _uiState.update { it.copy(statusFilter = value) }
     fun onSyncFilterChange(value: String) = _uiState.update { it.copy(syncFilter = value) }
+    fun onUpdateQueueFilterChange(value: String) = _uiState.update { it.copy(updateQueueFilter = value) }
+
+    fun applyScannedIdentity(nrc: String, fullName: String, gender: String, dob: String) {
+        val parts = fullName.trim().split(" ").filter { it.isNotBlank() }
+        val first = parts.firstOrNull().orEmpty()
+        val last = parts.drop(1).joinToString(" ")
+        _uiState.update {
+            it.copy(
+                personal = it.personal.copy(
+                    nrcNumber = nrc,
+                    firstName = first,
+                    lastName = last,
+                    sex = if (gender.equals("F", ignoreCase = true) || gender.equals("Female", ignoreCase = true)) "FEMALE" else "MALE",
+                    dateOfBirth = dob,
+                ),
+            )
+        }
+    }
+
+    fun setCorrectionDraftSaved(saved: Boolean) = _uiState.update { it.copy(correctionDraftSaved = saved) }
 
     fun updatePersonal(transform: (PersonalDetailsForm) -> PersonalDetailsForm) {
         _uiState.update { it.copy(personal = transform(it.personal), personalErrors = emptyMap()) }
@@ -197,7 +248,14 @@ class RegistrationViewModel @Inject constructor(
 
     fun goToPersonalStep() = _uiState.update { it.copy(registrationStep = 1) }
 
+    val lastRegisteredId = _uiState.map { it.lastRegisteredLocalId }.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        null,
+    )
+
     fun resetRegistrationForm() {
+        val lastId = _uiState.value.lastRegisteredLocalId
         _uiState.update {
             it.copy(
                 personal = PersonalDetailsForm(),
@@ -206,6 +264,7 @@ class RegistrationViewModel @Inject constructor(
                 personalErrors = emptyMap(),
                 cropErrors = emptyMap(),
                 saveError = null,
+                lastRegisteredLocalId = lastId,
             )
         }
     }
@@ -223,6 +282,7 @@ class RegistrationViewModel @Inject constructor(
                     personal = _uiState.value.personal,
                     crop = _uiState.value.crop,
                 )
+                _uiState.update { it.copy(lastRegisteredLocalId = id) }
                 resetRegistrationForm()
                 onCreated(id)
             } catch (e: Exception) {
@@ -331,4 +391,44 @@ class RegistrationViewModel @Inject constructor(
         if (strings == null || strings <= 0) errors["stringsPerBarn"] = "Strings per barn is required"
         return errors
     }
+}
+
+private fun GrowerEntity.toListItem(): GrowerListItem {
+    val name = listOfNotNull(first_name, middle_name, last_name).joinToString(" ")
+    val statusLabel = status.replace('_', ' ').lowercase().replaceFirstChar { it.titlecase() }
+    val statusTone = when (status.uppercase()) {
+        "ACTIVE", "APPROVED" -> GlTone.Success
+        "PENDING", "REVIEW" -> GlTone.Warning
+        "DRAFT" -> GlTone.Default
+        "RETURNED_FOR_CORRECTION" -> GlTone.Gold
+        else -> GlTone.Default
+    }
+    return GrowerListItem(
+        localId = local_id,
+        name = name,
+        tbzId = tbz_id ?: nrc_number,
+        subtitle = listOfNotNull(district, province).joinToString(" · ").ifBlank { "—" },
+        statusLabel = statusLabel,
+        statusTone = statusTone,
+        syncStatus = sync_status,
+        riskLabel = "Low",
+        riskTone = GlTone.Success,
+        flagged = status == "RETURNED_FOR_CORRECTION",
+    )
+}
+
+private fun matchesHandoffListFilter(grower: GrowerEntity, filter: String): Boolean = when (filter) {
+    "Active" -> grower.status.uppercase() in listOf("ACTIVE", "APPROVED")
+    "Pending" -> grower.status.uppercase() in listOf("PENDING", "REVIEW", "RETURNED_FOR_CORRECTION")
+    "High risk" -> grower.status == "RETURNED_FOR_CORRECTION"
+    "Drafts" -> grower.status.uppercase() == "DRAFT"
+    else -> true
+}
+
+private fun matchesHandoffPreviewFilter(item: GrowerListItem, filter: String): Boolean = when (filter) {
+    "Active" -> item.statusLabel.equals("Active", ignoreCase = true)
+    "Pending" -> item.statusLabel in listOf("Pending", "Review")
+    "High risk" -> item.riskLabel == "High"
+    "Drafts" -> item.statusLabel.equals("Draft", ignoreCase = true)
+    else -> true
 }
