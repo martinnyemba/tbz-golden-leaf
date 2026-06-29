@@ -65,7 +65,7 @@ class MarketingViewModel @Inject constructor(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MarketingHubStats())
 
     init {
-        viewModelScope.launch { referenceRepository.refreshReference() }
+        viewModelScope.launch { runCatching { referenceRepository.refreshReference() } }
     }
 
     fun districtsForProvince(provinceId: String) =

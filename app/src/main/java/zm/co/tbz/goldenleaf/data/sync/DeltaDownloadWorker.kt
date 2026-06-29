@@ -34,21 +34,40 @@ class DeltaDownloadWorker @AssistedInject constructor(
     private val inspectionRepository: InspectionRepository,
     private val syncRepository: SyncRepository,
     private val authRepository: AuthRepository,
+    private val referenceRepository: zm.co.tbz.goldenleaf.data.repository.ReferenceRepository,
     private val userPreferences: UserPreferences,
     private val json: Json,
 ) : CoroutineWorker(context, workerParams) {
 
     override suspend fun doWork(): Result {
-        if (!authRepository.refreshSessionIfNeeded()) return Result.retry()
-        return try {
-            pullGrowers()
-            pullTransportPermits()
-            pullGroupPermits()
-            pullInspections()
+        // Best-effort proactive refresh; the OkHttp authenticator also refreshes on 401.
+        authRepository.refreshSessionIfNeeded()
+
+        // Each section is independent: one failing endpoint must not block the rest,
+        // and a partial pull should still update the "last sync" timestamp.
+        val errors = mutableListOf<String>()
+        var anySuccess = false
+        suspend fun section(name: String, block: suspend () -> Unit) {
+            runCatching { block() }
+                .onSuccess { anySuccess = true }
+                .onFailure { errors += "$name: ${it.message ?: it.javaClass.simpleName}" }
+        }
+
+        section("reference") { referenceRepository.refreshReference() }
+        section("growers") { pullGrowers() }
+        section("transport permits") { pullTransportPermits() }
+        section("group permits") { pullGroupPermits() }
+        section("inspections") { pullInspections() }
+
+        if (anySuccess) {
             userPreferences.setLastSyncAt(System.currentTimeMillis())
-            Result.success()
-        } catch (_: Exception) {
-            Result.retry()
+        }
+        userPreferences.setLastSyncError(errors.takeIf { it.isNotEmpty() }?.joinToString("\n"))
+
+        return when {
+            errors.isEmpty() -> Result.success()
+            anySuccess -> Result.success() // partial; surfaced via lastSyncError
+            else -> Result.retry()
         }
     }
 

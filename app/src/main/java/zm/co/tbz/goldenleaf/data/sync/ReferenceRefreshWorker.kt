@@ -19,6 +19,11 @@ class ReferenceRefreshWorker @AssistedInject constructor(
 
     override suspend fun doWork(): Result {
         authRepository.refreshSessionIfNeeded()
-        return if (referenceRepository.refreshReference()) Result.success() else Result.retry()
+        return try {
+            referenceRepository.refreshReference()
+            Result.success()
+        } catch (_: Exception) {
+            Result.retry()
+        }
     }
 }

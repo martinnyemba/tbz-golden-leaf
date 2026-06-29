@@ -21,6 +21,7 @@ import zm.co.tbz.goldenleaf.data.local.preferences.UserPreferences
 import zm.co.tbz.goldenleaf.data.repository.SyncRepository
 import zm.co.tbz.goldenleaf.data.sync.SyncCoordinator
 import zm.co.tbz.goldenleaf.ui.components.ErrorText
+import zm.co.tbz.goldenleaf.ui.components.GlBanner
 import zm.co.tbz.goldenleaf.ui.components.GlButton
 import zm.co.tbz.goldenleaf.ui.components.GlCard
 import zm.co.tbz.goldenleaf.ui.components.GlDivider
@@ -29,6 +30,7 @@ import zm.co.tbz.goldenleaf.ui.components.GlFieldRow
 import zm.co.tbz.goldenleaf.ui.components.GlRow
 import zm.co.tbz.goldenleaf.ui.components.GlScreenHeader
 import zm.co.tbz.goldenleaf.ui.components.GlSectionHeader
+import zm.co.tbz.goldenleaf.ui.components.GlTone
 import zm.co.tbz.goldenleaf.ui.components.GlSyncChip
 import zm.co.tbz.goldenleaf.ui.components.GlToggle
 import zm.co.tbz.goldenleaf.ui.components.glColors
@@ -50,7 +52,10 @@ class SyncSettingsViewModel @Inject constructor(
     fun setWifiOnly(value: Boolean) = viewModelScope.launch { userPreferences.setWifiOnlySync(value) }
 
     fun syncNow() {
-        viewModelScope.launch { syncCoordinator.scheduleUpload(force = true) }
+        viewModelScope.launch {
+            syncCoordinator.scheduleUpload(force = true)
+            syncCoordinator.scheduleDeltaDownload(force = true)
+        }
     }
 }
 
@@ -76,6 +81,14 @@ fun SyncSettingsScreen(viewModel: SyncSettingsViewModel = hiltViewModel()) {
                             },
                         )
                     }
+                }
+                prefs?.lastSyncError?.takeIf { it.isNotBlank() }?.let { err ->
+                    GlBanner(
+                        title = "Last sync had errors",
+                        subtitle = err,
+                        tone = GlTone.Warning,
+                        icon = "warning",
+                    )
                 }
                 GlSectionHeader(title = "Sync settings")
                 GlCard(contentPadding = 4.dp) {

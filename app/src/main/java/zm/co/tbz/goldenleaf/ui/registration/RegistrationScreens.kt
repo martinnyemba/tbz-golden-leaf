@@ -37,6 +37,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -477,22 +479,25 @@ fun GrowerDetailScreen(
                         Triple("NRC", entity?.nrc_number ?: "—", ""),
                         Triple("Phone", entity?.phone_number ?: "—", ""),
                         Triple("Sync", entity?.sync_status?.replace('_', ' ') ?: "—", ""),
-                    ).forEachIndexed { index, (label, value, sub) ->
+                    ).forEachIndexed { index, (label, value, _) ->
+                        val numeric = label == "NRC" || label == "Phone"
                         Column(
                             modifier = Modifier
                                 .weight(1f)
-                                .padding(vertical = 14.dp, horizontal = 6.dp),
+                                .padding(vertical = 14.dp, horizontal = 8.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
                             Text(
                                 value,
                                 color = c.text,
-                                fontSize = if (label == "NRC") 12.sp else 18.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                fontFamily = if (label == "NRC") FontFamily.Monospace else FontFamily.Default,
+                                fontSize = if (numeric) 12.sp else 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                fontFamily = if (numeric) FontFamily.Monospace else FontFamily.Default,
+                                textAlign = TextAlign.Center,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
                             )
                             Text(label.uppercase(), color = c.textMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp))
-                            Text(sub, color = c.textSubtle, fontSize = 10.sp, modifier = Modifier.padding(top = 1.dp))
                         }
                         if (index < 2) {
                             Box(Modifier.size(width = 1.dp, height = 48.dp).background(c.outlineSoft))

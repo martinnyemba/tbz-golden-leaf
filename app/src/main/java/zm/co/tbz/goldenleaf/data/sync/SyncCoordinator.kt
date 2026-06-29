@@ -58,12 +58,16 @@ class SyncCoordinator @Inject constructor(
         workManager.enqueueUniqueWork(WORK_REFERENCE, ExistingWorkPolicy.KEEP, request)
     }
 
-    fun scheduleDeltaDownload() {
+    fun scheduleDeltaDownload(force: Boolean = false) {
         val request = OneTimeWorkRequestBuilder<DeltaDownloadWorker>()
             .setConstraints(connectedConstraints())
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 1, TimeUnit.MINUTES)
             .build()
-        workManager.enqueueUniqueWork(WORK_DELTA, ExistingWorkPolicy.KEEP, request)
+        workManager.enqueueUniqueWork(
+            WORK_DELTA,
+            if (force) ExistingWorkPolicy.REPLACE else ExistingWorkPolicy.KEEP,
+            request,
+        )
     }
 
     suspend fun manualSync(): ManualSyncOutcome {

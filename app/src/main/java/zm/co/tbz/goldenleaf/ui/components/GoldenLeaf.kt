@@ -1058,15 +1058,24 @@ fun GlFieldRow(label: String, value: String, modifier: Modifier = Modifier, mono
     val c = glColors()
     Row(
         modifier = modifier.fillMaxWidth().padding(vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalAlignment = Alignment.Top,
     ) {
-        Text(label, color = c.textMuted, fontSize = 13.sp, fontWeight = FontWeight.Medium)
         Text(
-            value, color = c.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+            label,
+            color = c.textMuted,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.weight(1f),
+        )
+        Text(
+            value,
+            color = c.text,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.SemiBold,
             textAlign = TextAlign.End,
             fontFamily = if (mono) Mono else FontFamily.Default,
-            modifier = Modifier.padding(start = 16.dp),
+            modifier = Modifier.weight(1.4f),
         )
     }
 }

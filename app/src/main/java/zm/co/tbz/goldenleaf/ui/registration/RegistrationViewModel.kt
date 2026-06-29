@@ -67,7 +67,7 @@ class RegistrationViewModel @Inject constructor(
     init {
         syncCoordinator.scheduleReferenceRefresh()
         syncCoordinator.scheduleDeltaDownload()
-        viewModelScope.launch { referenceRepository.refreshReference() }
+        viewModelScope.launch { runCatching { referenceRepository.refreshReference() } }
         refreshGrowers()
     }
 

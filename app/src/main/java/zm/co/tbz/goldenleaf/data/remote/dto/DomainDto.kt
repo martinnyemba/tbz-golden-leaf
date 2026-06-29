@@ -1,5 +1,7 @@
 package zm.co.tbz.goldenleaf.data.remote.dto
 
+import kotlinx.serialization.EncodeDefault
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 
@@ -140,7 +142,9 @@ data class InspectionDto(
 @Serializable
 data class VerifyQrRequest(
     val permit_token: String,
-    val salesfloor_id: String? = null
+    @OptIn(ExperimentalSerializationApi::class)
+    @EncodeDefault(EncodeDefault.Mode.NEVER)
+    val salesfloor_id: String? = null,
 )
 
 @Serializable

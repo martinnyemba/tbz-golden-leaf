@@ -107,7 +107,7 @@ class PermitViewModel @Inject constructor(
         viewModelScope.launch {
             canApprovePermit.value = accessControl.hasPermissionAsync("permits.approve_permit")
         }
-        viewModelScope.launch { referenceRepository.refreshReference() }
+        viewModelScope.launch { runCatching { referenceRepository.refreshReference() } }
     }
 
     val filteredPermits = combine(transportPermits, _requestState) { list, state ->

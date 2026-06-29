@@ -38,11 +38,11 @@ class ReferenceRepository @Inject constructor(
     /**
      * Fetches the full reference bundle (provinces, districts, sponsors, sales
      * floors, buyers, tobacco/crop types, barn types) and caches it locally.
-     * Returns true on success. Safe to call repeatedly; the 401 path is handled
-     * by the OkHttp token authenticator so an expired session is refreshed and
-     * the call retried transparently.
+     * Throws on failure so callers can surface the real error; the 401 path is
+     * handled by the OkHttp token authenticator so an expired session is
+     * refreshed and the call retried transparently.
      */
-    suspend fun refreshReference(): Boolean = try {
+    suspend fun refreshReference() {
         val bundle = api.reference()
         upsertProvinces(bundle.provinces.map { ProvinceEntity(it.id, it.name, it.code) })
         upsertDistricts(bundle.districts.map { DistrictEntity(it.id, it.name, it.province_id) })
@@ -52,8 +52,5 @@ class ReferenceRepository @Inject constructor(
         upsertTobaccoTypes(bundle.tobacco_types.map { TobaccoTypeEntity(it.id, it.name, it.code) })
         upsertBarnTypes(bundle.barn_types.map { BarnTypeEntity(it.id, it.name) })
         userPreferences.setReferenceVersion(bundle.version)
-        true
-    } catch (_: Exception) {
-        false
     }
 }
