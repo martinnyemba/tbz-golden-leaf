@@ -61,14 +61,14 @@ class RegistrationViewModel @Inject constructor(
     private val json: Json,
 ) : ViewModel() {
 
+    private val _uiState = MutableStateFlow(RegistrationUiState())
+    val uiState: StateFlow<RegistrationUiState> = _uiState.asStateFlow()
+
     init {
         syncCoordinator.scheduleReferenceRefresh()
         syncCoordinator.scheduleDeltaDownload()
         refreshGrowers()
     }
-
-    private val _uiState = MutableStateFlow(RegistrationUiState())
-    val uiState: StateFlow<RegistrationUiState> = _uiState.asStateFlow()
 
     val growers = growerRepository.observeGrowers().stateIn(
         viewModelScope,

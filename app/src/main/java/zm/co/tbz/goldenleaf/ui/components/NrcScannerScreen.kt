@@ -40,6 +40,7 @@ import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
 
 private val nrcPattern = Regex("""\b(\d{6})\s*/\s*(\d{2})\s*/\s*(\d)\b""")
 private val passportPattern = Regex("""\b([A-Z]{1,2}\d{6,7})\b""")
@@ -111,7 +112,6 @@ private fun NrcScannerDialog(
                     }
                 }
             } else {
-                var scanned by remember { mutableStateOf(false) }
                 Box(
                     Modifier
                         .fillMaxWidth()
@@ -119,14 +119,8 @@ private fun NrcScannerDialog(
                         .padding(top = 8.dp),
                 ) {
                     NrcCameraPreview(
-                        onScan = { value ->
-                            if (!scanned) {
-                                scanned = true
-                                onResult(value)
-                            }
-                        },
+                        onScan = onResult,
                         modifier = Modifier.fillMaxSize(),
-                        active = !scanned,
                     )
                 }
                 Text(
@@ -146,15 +140,17 @@ private fun NrcScannerDialog(
 internal fun NrcCameraPreview(
     onScan: (String) -> Unit,
     modifier: Modifier = Modifier,
-    active: Boolean = true,
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
     val recognizer = remember { TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS) }
+    // Thread-safe gate: analyzer runs off the main thread (same pattern as QrCameraPreview).
+    val scanned = remember { AtomicBoolean(false) }
 
     DisposableEffect(Unit) {
         onDispose {
+            scanned.set(false)
             recognizer.close()
             cameraExecutor.shutdown()
         }
@@ -179,7 +175,7 @@ internal fun NrcCameraPreview(
                     .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                     .build()
                 analysis.setAnalyzer(cameraExecutor) { imageProxy ->
-                    if (!active) {
+                    if (scanned.get()) {
                         imageProxy.close()
                         return@setAnalyzer
                     }
@@ -192,7 +188,7 @@ internal fun NrcCameraPreview(
                         recognizer.process(image)
                             .addOnSuccessListener { result ->
                                 val match = extractNrcOrPassport(result.text)
-                                if (match != null) {
+                                if (match != null && scanned.compareAndSet(false, true)) {
                                     onScan(match)
                                 }
                             }

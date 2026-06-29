@@ -872,9 +872,10 @@ fun ScanNrcScreen(
                         }
                     } else {
                         NrcCameraPreview(
-                            onScan = { detectedNrc = it },
+                            onScan = { value ->
+                                if (detectedNrc == null) detectedNrc = value
+                            },
                             modifier = Modifier.fillMaxSize(),
-                            active = detectedNrc == null,
                         )
                     }
                     Box(
