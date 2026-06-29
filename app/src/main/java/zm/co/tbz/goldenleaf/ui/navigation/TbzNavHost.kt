@@ -2,16 +2,12 @@ package zm.co.tbz.goldenleaf.ui.navigation
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -33,6 +29,8 @@ import zm.co.tbz.goldenleaf.ui.auth.ForgotPasswordScreen
 import zm.co.tbz.goldenleaf.ui.auth.Login2FAScreen
 import zm.co.tbz.goldenleaf.ui.auth.OnboardingScreen
 import zm.co.tbz.goldenleaf.ui.auth.PortalLoginScreen
+import zm.co.tbz.goldenleaf.ui.components.GlIcon
+import zm.co.tbz.goldenleaf.ui.components.glColors
 import zm.co.tbz.goldenleaf.ui.home.DashboardScreen
 import zm.co.tbz.goldenleaf.ui.inspection.CuringInspectionFormScreen
 import zm.co.tbz.goldenleaf.ui.inspection.FieldInspectionFormScreen
@@ -426,32 +424,45 @@ private fun MainShell(
 ) {
     val menuAccess by menuAccessViewModel.state.collectAsState()
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
+    val c = glColors()
     Scaffold(
+        containerColor = c.bg,
         bottomBar = {
-            NavigationBar {
+            val itemColors = NavigationBarItemDefaults.colors(
+                selectedIconColor = c.primary,
+                selectedTextColor = c.primary,
+                indicatorColor = c.primarySoft,
+                unselectedIconColor = c.textSubtle,
+                unselectedTextColor = c.textSubtle,
+            )
+            NavigationBar(containerColor = c.surface, tonalElevation = 0.dp) {
                 NavigationBarItem(
                     selected = selectedTab == 0,
                     onClick = { selectedTab = 0 },
-                    icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
+                    icon = { GlIcon("home", filled = selectedTab == 0) },
                     label = { Text("Home") },
+                    colors = itemColors,
                 )
                 NavigationBarItem(
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 },
-                    icon = { Icon(Icons.Default.Search, contentDescription = "Search") },
+                    icon = { GlIcon("search", filled = selectedTab == 1) },
                     label = { Text("Search") },
+                    colors = itemColors,
                 )
                 NavigationBarItem(
                     selected = selectedTab == 2,
                     onClick = { selectedTab = 2 },
-                    icon = { Icon(Icons.Default.Menu, contentDescription = "Menu") },
+                    icon = { GlIcon("menu", filled = selectedTab == 2) },
                     label = { Text("More") },
+                    colors = itemColors,
                 )
                 NavigationBarItem(
                     selected = selectedTab == 3,
                     onClick = { selectedTab = 3 },
-                    icon = { Icon(Icons.Default.Person, contentDescription = "Profile") },
+                    icon = { GlIcon("profile", filled = selectedTab == 3) },
                     label = { Text("Profile") },
+                    colors = itemColors,
                 )
             }
         },
