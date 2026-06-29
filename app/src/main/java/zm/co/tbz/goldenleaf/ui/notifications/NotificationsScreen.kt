@@ -13,7 +13,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Scaffold
+import zm.co.tbz.goldenleaf.ui.components.GlScaffold
+import zm.co.tbz.goldenleaf.ui.components.glVerticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
@@ -71,7 +72,7 @@ fun NotificationsScreen(
         }
     }
 
-    Scaffold(containerColor = c.bg) { padding ->
+    GlScaffold(containerColor = c.bg) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             GlScreenHeader(
                 title = "Notifications",
@@ -97,7 +98,7 @@ fun NotificationsScreen(
                 Column(
                     Modifier
                         .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
+                        .glVerticalScroll()
                         .padding(horizontal = 20.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {

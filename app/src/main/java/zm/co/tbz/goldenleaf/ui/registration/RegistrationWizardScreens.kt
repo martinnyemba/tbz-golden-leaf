@@ -18,7 +18,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Scaffold
+import zm.co.tbz.goldenleaf.ui.components.GlScaffold
+import zm.co.tbz.goldenleaf.ui.components.glVerticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -112,14 +113,14 @@ fun RegistrationStepTypeScreen(
     val personal = uiState.personal
     val c = glColors()
 
-    Scaffold(
+    GlScaffold(
         containerColor = c.bg,
         bottomBar = {
             WizardFooter("Cancel", onBack, "Continue", onContinue, primaryIcon = "arrow-right")
         },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
-            Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+            Column(Modifier.weight(1f).glVerticalScroll()) {
             GlScreenHeader(title = "New grower", subtitle = "1 of 4", onBack = onBack)
             GlStepper(step = 1, total = 4, stepLabels = wizardLabels)
             Column(Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
@@ -220,14 +221,14 @@ fun RegistrationStepIdentityScreen(
     val fullName = listOf(personal.firstName, personal.lastName).filter { it.isNotBlank() }.joinToString(" ")
     val c = glColors()
 
-    Scaffold(
+    GlScaffold(
         containerColor = c.bg,
         bottomBar = {
             WizardFooter("Back", onBack, "Continue", onContinue, primaryIcon = "arrow-right")
         },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
-            Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+            Column(Modifier.weight(1f).glVerticalScroll()) {
             GlScreenHeader(title = "New grower", subtitle = "2 of 4", onBack = onBack)
             GlStepper(step = 2, total = 4, stepLabels = wizardLabels)
             Column(
@@ -336,14 +337,14 @@ fun RegistrationStepFarmScreen(
         "Not captured"
     }
 
-    Scaffold(
+    GlScaffold(
         containerColor = c.bg,
         bottomBar = {
             WizardFooter("Back", onBack, "Continue", onContinue, primaryIcon = "arrow-right")
         },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
-            Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+            Column(Modifier.weight(1f).glVerticalScroll()) {
             GlScreenHeader(title = "New grower", subtitle = "3 of 4", onBack = onBack)
             GlStepper(step = 3, total = 4, stepLabels = wizardLabels)
             Column(
@@ -550,7 +551,7 @@ fun RegistrationStepPhotosScreen(
         Triple("Farm overview", personal.farmOverviewPhotoPath != null, "farm"),
     )
 
-    Scaffold(
+    GlScaffold(
         containerColor = c.bg,
         bottomBar = {
             WizardFooter(
@@ -564,7 +565,7 @@ fun RegistrationStepPhotosScreen(
         },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
-            Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+            Column(Modifier.weight(1f).glVerticalScroll()) {
             GlScreenHeader(title = "New grower", subtitle = "4 of 4", onBack = onBack)
             GlStepper(step = 4, total = 4, stepLabels = wizardLabels)
             Column(Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
@@ -712,7 +713,7 @@ fun RegistrationSuccessScreen(
     provisionalId: String = "Pending sync",
 ) {
     val c = glColors()
-    Scaffold(
+    GlScaffold(
         containerColor = c.bg,
         bottomBar = {
             Column(

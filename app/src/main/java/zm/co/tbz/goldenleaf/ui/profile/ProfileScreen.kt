@@ -11,7 +11,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Scaffold
+import zm.co.tbz.goldenleaf.ui.components.GlScaffold
+import zm.co.tbz.goldenleaf.ui.components.glVerticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -82,9 +83,9 @@ fun ProfileScreen(
     val c = glColors()
     val isDark = prefs?.darkTheme == true
 
-    Scaffold(containerColor = c.bg, modifier = modifier) { padding ->
+    GlScaffold(containerColor = c.bg, modifier = modifier) { padding ->
         Column(
-            Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()),
+            Modifier.fillMaxSize().padding(padding).glVerticalScroll(),
         ) {
             Column(
                 modifier = Modifier

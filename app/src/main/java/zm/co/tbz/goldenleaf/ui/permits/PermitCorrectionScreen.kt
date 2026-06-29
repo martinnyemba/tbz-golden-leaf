@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.Scaffold
+import zm.co.tbz.goldenleaf.ui.components.GlScaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -52,7 +52,7 @@ fun PermitCorrectionScreen(
         permit?.let { viewModel.loadCorrectionFromPermit(it) }
     }
 
-    Scaffold(containerColor = c.bg) { padding ->
+    GlScaffold(containerColor = c.bg) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             GlScreenHeader(title = "Permit correction")
             if (permit == null) {

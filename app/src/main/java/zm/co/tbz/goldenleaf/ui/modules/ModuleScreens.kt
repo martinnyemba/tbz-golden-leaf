@@ -13,7 +13,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Scaffold
+import zm.co.tbz.goldenleaf.ui.components.GlScaffold
+import zm.co.tbz.goldenleaf.ui.components.glVerticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -116,13 +117,13 @@ fun SearchScreen(
 @Composable
 fun StaticContentScreen(title: String, body: String) {
     val c = glColors()
-    Scaffold(containerColor = c.bg) { padding ->
+    GlScaffold(containerColor = c.bg) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             GlScreenHeader(title = title)
             Column(
                 Modifier
                     .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
+                    .glVerticalScroll()
                     .padding(16.dp),
             ) {
                 Text(body, color = c.text, fontSize = 14.sp)

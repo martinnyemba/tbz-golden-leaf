@@ -12,8 +12,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.imeNestedScroll
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -23,11 +26,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -85,6 +91,7 @@ import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -93,12 +100,14 @@ import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -114,6 +123,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 import zm.co.tbz.goldenleaf.R
 import zm.co.tbz.goldenleaf.ui.theme.GlColorScheme
 import zm.co.tbz.goldenleaf.ui.theme.GlStatus
@@ -362,6 +372,8 @@ fun GlTextField(
 ) {
     val c = glColors()
     var focused by remember { mutableStateOf(false) }
+    val bringIntoViewRequester = remember { BringIntoViewRequester() }
+    val scope = rememberCoroutineScope()
     val multiline = !singleLine || minLines > 1
     val borderColor = when {
         error != null -> c.danger
@@ -392,7 +404,15 @@ fun GlTextField(
                 BasicTextField(
                     value = value,
                     onValueChange = onValueChange,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .bringIntoViewRequester(bringIntoViewRequester)
+                        .onFocusChanged { focusState ->
+                            focused = focusState.isFocused
+                            if (focusState.isFocused) {
+                                scope.launch { bringIntoViewRequester.bringIntoView() }
+                            }
+                        },
                     enabled = enabled,
                     singleLine = singleLine,
                     minLines = minLines,
@@ -1113,6 +1133,37 @@ fun GlOtpInput(
         )
         GlOtpBoxes(value = value, length = length)
     }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SCAFFOLD + SCROLL — edge-to-edge IME handling (keyboard pushes content up)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Drop-in [Scaffold] replacement that resizes when the soft keyboard opens.
+ * Required because [androidx.activity.enableEdgeToEdge] disables manifest adjustResize.
+ */
+@Composable
+fun GlScaffold(
+    modifier: Modifier = Modifier,
+    containerColor: Color = MaterialTheme.colorScheme.background,
+    bottomBar: @Composable () -> Unit = {},
+    content: @Composable (PaddingValues) -> Unit,
+) {
+    Scaffold(
+        modifier = modifier.imePadding(),
+        containerColor = containerColor,
+        bottomBar = bottomBar,
+    ) { padding ->
+        content(padding)
+    }
+}
+
+/** Scrollable column modifier that cooperates with the IME inset animations. */
+@Composable
+fun Modifier.glVerticalScroll(): Modifier {
+    val scrollState = rememberScrollState()
+    return verticalScroll(scrollState).imeNestedScroll()
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

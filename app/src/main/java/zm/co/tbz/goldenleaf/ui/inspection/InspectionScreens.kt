@@ -15,7 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Scaffold
+import zm.co.tbz.goldenleaf.ui.components.GlScaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -76,7 +76,7 @@ fun InspectionHubScreen(
     val stats by viewModel.hubStats.collectAsState()
     val c = glColors()
 
-    Scaffold(containerColor = c.bg) { padding ->
+    GlScaffold(containerColor = c.bg) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             GlScreenHeader(title = "Inspections", subtitle = "Field, nursery, curing & validation")
             Column(
@@ -128,7 +128,7 @@ fun ScheduleInspectionScreen(
 
     LaunchedEffect(Unit) { viewModel.initScheduleForm() }
 
-    Scaffold(containerColor = c.bg) { padding ->
+    GlScaffold(containerColor = c.bg) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             GlScreenHeader(title = "Schedule inspection")
             ScrollableFormColumn {
@@ -238,7 +238,7 @@ fun LocalSchedulesScreen(
     val uiState by viewModel.uiState.collectAsState()
     val c = glColors()
 
-    Scaffold(containerColor = c.bg) { padding ->
+    GlScaffold(containerColor = c.bg) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             GlScreenHeader(title = "Local schedules")
             Column(Modifier.padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -277,7 +277,7 @@ fun InspectionPortalListScreen(
     val stats by viewModel.hubStats.collectAsState()
     val c = glColors()
 
-    Scaffold(containerColor = c.bg, modifier = modifier) { padding ->
+    GlScaffold(containerColor = c.bg, modifier = modifier) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             GlScreenHeader(
                 title = "Inspections",
@@ -346,7 +346,7 @@ fun InspectionDetailScreen(
         inspection?.let { viewModel.loadFormsForInspection(it) }
     }
 
-    Scaffold(containerColor = c.bg) { padding ->
+    GlScaffold(containerColor = c.bg) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             GlScreenHeader(title = "Inspection detail")
             val item = inspection
@@ -406,7 +406,7 @@ fun InspectionReportsScreen(
     val uiState by viewModel.uiState.collectAsState()
     val c = glColors()
 
-    Scaffold(containerColor = c.bg) { padding ->
+    GlScaffold(containerColor = c.bg) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             GlScreenHeader(title = "Inspection reports")
             Column(Modifier.padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -444,7 +444,7 @@ fun HighRiskGrowersScreen(
     val uiState by viewModel.uiState.collectAsState()
     val c = glColors()
 
-    Scaffold(containerColor = c.bg) { padding ->
+    GlScaffold(containerColor = c.bg) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             GlScreenHeader(title = "High-risk growers", subtitle = "${rows.size} flagged")
             Column(Modifier.padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -534,7 +534,7 @@ fun FieldInspectionFormScreen(
         }
     }
 
-    Scaffold(containerColor = c.bg) { padding ->
+    GlScaffold(containerColor = c.bg) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             GlScreenHeader(title = "Field inspection", subtitle = form.growerName.ifBlank { null })
             ScrollableFormColumn {
@@ -640,7 +640,7 @@ fun NurseryInspectionFormScreen(
         viewModel.updateNursery { it.copy(deviceId = deviceId, inspectionLocalId = inspectionId) }
     }
 
-    Scaffold(containerColor = c.bg) { padding ->
+    GlScaffold(containerColor = c.bg) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             GlScreenHeader(title = "Nursery inspection", subtitle = form.growerName.ifBlank { null })
             ScrollableFormColumn {
@@ -722,7 +722,7 @@ fun CuringInspectionFormScreen(
         InspectionFormChoices.curingBarnTypes
     }
 
-    Scaffold(containerColor = c.bg) { padding ->
+    GlScaffold(containerColor = c.bg) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             GlScreenHeader(title = "Curing inspection", subtitle = form.growerName.ifBlank { null })
             ScrollableFormColumn {
@@ -830,7 +830,7 @@ fun ValidationFormScreen(
         InspectionFormChoices.validationBarnTypes
     }
 
-    Scaffold(containerColor = c.bg) { padding ->
+    GlScaffold(containerColor = c.bg) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             GlScreenHeader(title = "Grower validation", subtitle = form.growerName.ifBlank { null })
             ScrollableFormColumn {
@@ -1025,7 +1025,7 @@ fun InspectionLookupScreen(
     val results by viewModel.growerSearchResults.collectAsState()
     val c = glColors()
 
-    Scaffold(containerColor = c.bg) { padding ->
+    GlScaffold(containerColor = c.bg) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             GlScreenHeader(title = "Inspection lookup")
             Column(Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {

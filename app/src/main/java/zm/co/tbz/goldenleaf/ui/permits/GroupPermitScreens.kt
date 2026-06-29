@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Scaffold
+import zm.co.tbz.goldenleaf.ui.components.GlScaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -60,7 +60,7 @@ fun GroupPermitHubScreen(
     val permits by viewModel.filteredGroupPermits.collectAsState()
     val c = glColors()
 
-    Scaffold(containerColor = c.bg) { padding ->
+    GlScaffold(containerColor = c.bg) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             GlScreenHeader(title = "Group permits", subtitle = "Multi-grower transport permits")
             Column(
@@ -109,7 +109,7 @@ fun GroupPermitCreateScreen(
     var entryForm by remember { mutableStateOf(GroupPermitEntryForm()) }
     val c = glColors()
 
-    Scaffold(containerColor = c.bg) { padding ->
+    GlScaffold(containerColor = c.bg) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             GlScreenHeader(title = if (uiState.step == 1) "Group permit — Header" else "Group permit — Entries")
             GlStepper(step = uiState.step, total = 2)
@@ -286,7 +286,7 @@ fun GroupPermitValidateScreen(
     val state by viewModel.validateState.collectAsState()
     val c = glColors()
 
-    Scaffold(containerColor = c.bg) { padding ->
+    GlScaffold(containerColor = c.bg) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             GlScreenHeader(title = "Validate group permit")
             ScrollableFormColumn {
@@ -358,7 +358,7 @@ fun GroupPermitStatusListScreen(
         if (initialStatus != "All") viewModel.onStatusFilterChange(initialStatus)
     }
 
-    Scaffold(containerColor = c.bg) { padding ->
+    GlScaffold(containerColor = c.bg) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             GlScreenHeader(title = "Group permit list")
             Column(Modifier.padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -396,7 +396,7 @@ fun GroupPermitDetailScreen(
     val reviewState by viewModel.reviewState.collectAsState()
     val c = glColors()
 
-    Scaffold(containerColor = c.bg) { padding ->
+    GlScaffold(containerColor = c.bg) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             GlScreenHeader(title = "Group permit detail")
             Column(
@@ -453,7 +453,7 @@ fun GroupPermitCorrectionScreen(
         permit?.let { viewModel.loadCorrectionFromPermit(it) }
     }
 
-    Scaffold(containerColor = c.bg) { padding ->
+    GlScaffold(containerColor = c.bg) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             GlScreenHeader(title = "Group permit correction")
             if (permit == null) {

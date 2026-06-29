@@ -19,7 +19,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Scaffold
+import zm.co.tbz.goldenleaf.ui.components.GlScaffold
+import zm.co.tbz.goldenleaf.ui.components.glVerticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
@@ -106,7 +107,7 @@ fun DashboardScreen(
         else -> pendingSync
     }
 
-    Scaffold(containerColor = c.bg) { padding ->
+    GlScaffold(containerColor = c.bg) { padding ->
         PullToRefreshBox(
             isRefreshing = state.isLoading,
             onRefresh = viewModel::refresh,
@@ -115,7 +116,7 @@ fun DashboardScreen(
             Column(
                 Modifier
                     .fillMaxSize()
-                    .verticalScroll(rememberScrollState()),
+                    .glVerticalScroll(),
             ) {
                 Row(
                     modifier = Modifier

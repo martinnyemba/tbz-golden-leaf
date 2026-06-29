@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Scaffold
+import zm.co.tbz.goldenleaf.ui.components.GlScaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -50,7 +50,7 @@ fun MarketingHubScreen(
     val pending by viewModel.pendingSales.collectAsState()
     val c = glColors()
 
-    Scaffold(containerColor = c.bg) { padding ->
+    GlScaffold(containerColor = c.bg) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             GlScreenHeader(title = "Marketing")
             ScrollableFormColumn {
@@ -107,7 +107,7 @@ fun SalesCaptureScreen(
     val buyers by viewModel.buyers.collectAsState()
     val c = glColors()
 
-    Scaffold(containerColor = c.bg) { padding ->
+    GlScaffold(containerColor = c.bg) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             GlScreenHeader(
                 title = when (state.step) {
@@ -166,7 +166,7 @@ fun PendingSalesScreen(
     val pending by viewModel.pendingSales.collectAsState()
     val c = glColors()
 
-    Scaffold(containerColor = c.bg) { padding ->
+    GlScaffold(containerColor = c.bg) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             GlScreenHeader(title = "Pending sales")
             Column(Modifier.padding(horizontal = 16.dp)) {
@@ -213,7 +213,7 @@ fun EditPendingSaleScreen(
         sale?.let { viewModel.loadPendingSaleForEdit(it) }
     }
 
-    Scaffold(containerColor = c.bg) { padding ->
+    GlScaffold(containerColor = c.bg) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             GlScreenHeader(title = "Edit pending sale")
             if (sale == null) {

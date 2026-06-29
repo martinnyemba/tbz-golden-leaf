@@ -27,7 +27,8 @@ import zm.co.tbz.goldenleaf.ui.components.GlAvatar
 import zm.co.tbz.goldenleaf.ui.components.GlPill
 import zm.co.tbz.goldenleaf.ui.components.GlPillSize
 import zm.co.tbz.goldenleaf.ui.components.GlImageSlot
-import androidx.compose.material3.Scaffold
+import zm.co.tbz.goldenleaf.ui.components.GlScaffold
+import zm.co.tbz.goldenleaf.ui.components.glVerticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -82,7 +83,7 @@ fun NewGrowerRegistrationScreen(
     val districts by viewModel.districtsForProvince(personal.provinceId).collectAsState(initial = emptyList())
     val c = glColors()
 
-    Scaffold(containerColor = c.bg) { padding ->
+    GlScaffold(containerColor = c.bg) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             GlScreenHeader(
                 title = "New registration",
@@ -378,7 +379,7 @@ fun GrowerEditScreen(
         grower?.let { viewModel.loadPersonalFromGrower(it) }
     }
 
-    Scaffold(containerColor = c.bg) { padding ->
+    GlScaffold(containerColor = c.bg) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             GlScreenHeader(title = "Edit grower")
             ScrollableFormColumn {
@@ -453,7 +454,7 @@ fun GrowerCorrectionScreen(
         grower?.let { viewModel.loadPersonalFromGrower(it) }
     }
 
-    Scaffold(
+    GlScaffold(
         containerColor = c.bg,
         bottomBar = {
             Row(
@@ -480,7 +481,7 @@ fun GrowerCorrectionScreen(
         },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
-            Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+            Column(Modifier.weight(1f).glVerticalScroll()) {
             GlScreenHeader(title = "Fix & resubmit", subtitle = "Returned for correction", onBack = onBack)
             GlCard(
                 contentPadding = 14.dp,
@@ -637,7 +638,7 @@ fun CropAllocationScreen(
     val barnTypes by viewModel.barnTypes.collectAsState()
     val c = glColors()
 
-    Scaffold(containerColor = c.bg) { padding ->
+    GlScaffold(containerColor = c.bg) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             GlScreenHeader(title = "Crop allocation")
             CropDetailsStep(

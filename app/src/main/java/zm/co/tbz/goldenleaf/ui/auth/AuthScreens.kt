@@ -20,7 +20,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Scaffold
+import zm.co.tbz.goldenleaf.ui.components.GlScaffold
+import zm.co.tbz.goldenleaf.ui.components.glVerticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -80,7 +81,7 @@ fun OnboardingScreen(onFinished: () -> Unit, onSkip: () -> Unit = onFinished) {
     )
     val isLast = step == slides.lastIndex
 
-    Scaffold(containerColor = c.bg) { padding ->
+    GlScaffold(containerColor = c.bg) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -186,12 +187,12 @@ fun PortalLoginScreen(
     var showPassword by remember { mutableStateOf(false) }
     var showApi by remember { mutableStateOf(false) }
 
-    Scaffold(containerColor = c.bg) { padding ->
+    GlScaffold(containerColor = c.bg) { padding ->
         Column(
             Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .verticalScroll(rememberScrollState()),
+                .glVerticalScroll(),
         ) {
             Row(
                 modifier = Modifier.padding(start = 28.dp, end = 28.dp, top = 32.dp, bottom = 16.dp),
@@ -386,7 +387,7 @@ fun ForgotPasswordScreen(
     var email by rememberSaveable { mutableStateOf("") }
 
     if (stage == "sent") {
-        Scaffold(containerColor = c.bg) { padding ->
+        GlScaffold(containerColor = c.bg) { padding ->
             Column(
                 Modifier
                     .fillMaxSize()
@@ -452,14 +453,14 @@ fun ForgotPasswordScreen(
         return
     }
 
-    Scaffold(containerColor = c.bg) { padding ->
+    GlScaffold(containerColor = c.bg) { padding ->
         Column(
             Modifier
                 .fillMaxSize()
                 .padding(padding),
             verticalArrangement = Arrangement.SpaceBetween,
         ) {
-            Column(Modifier.verticalScroll(rememberScrollState())) {
+            Column(Modifier.glVerticalScroll()) {
                 GlScreenHeader(title = "Reset password", onBack = onBack)
                 Column(Modifier.padding(horizontal = 28.dp, vertical = 12.dp)) {
                     Box(
@@ -540,7 +541,7 @@ fun Login2FAScreen(
     val state by viewModel.state.collectAsState()
     val c = glColors()
 
-    Scaffold(containerColor = c.bg) { padding ->
+    GlScaffold(containerColor = c.bg) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             GlScreenHeader(title = "", onBack = onBack)
             Column(
@@ -613,7 +614,7 @@ fun Login2FAScreen(
 fun ChangePasswordScreen(onDone: () -> Unit, viewModel: ChangePasswordViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsState()
     val c = glColors()
-    Scaffold(containerColor = c.bg) { padding ->
+    GlScaffold(containerColor = c.bg) { padding ->
         Column(
             Modifier.fillMaxSize().padding(padding).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),

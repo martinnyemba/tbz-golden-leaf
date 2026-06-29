@@ -10,7 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.Scaffold
+import zm.co.tbz.goldenleaf.ui.components.GlScaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -60,7 +60,7 @@ fun PermitsHubScreen(
     val requests by viewModel.permitRequests.collectAsState()
     val c = glColors()
 
-    Scaffold(containerColor = c.bg) { padding ->
+    GlScaffold(containerColor = c.bg) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             GlScreenHeader(title = "Permits", subtitle = "Transport & group permits")
             Column(
@@ -106,7 +106,7 @@ fun PermitRequestScreen(
     val districts by viewModel.districtsForProvince(form.originProvince).collectAsState(initial = emptyList())
     val c = glColors()
 
-    Scaffold(containerColor = c.bg) { padding ->
+    GlScaffold(containerColor = c.bg) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             GlScreenHeader(
                 title = when (uiState.step) {
@@ -159,7 +159,7 @@ fun PermitValidateScreen(
     val salesFloors by viewModel.salesFloors.collectAsState()
     val c = glColors()
 
-    Scaffold(containerColor = c.bg) { padding ->
+    GlScaffold(containerColor = c.bg) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             GlScreenHeader(title = "Validate permit")
             ScrollableFormColumn {
@@ -219,7 +219,7 @@ fun PermitListScreen(
     val uiState by viewModel.requestState.collectAsState()
     val c = glColors()
 
-    Scaffold(containerColor = c.bg, modifier = modifier) { padding ->
+    GlScaffold(containerColor = c.bg, modifier = modifier) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             GlScreenHeader(
                 title = "Permits",
@@ -283,7 +283,7 @@ fun PermitDetailScreen(
     val reviewState by viewModel.reviewState.collectAsState()
     val c = glColors()
 
-    Scaffold(containerColor = c.bg) { padding ->
+    GlScaffold(containerColor = c.bg) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             GlScreenHeader(title = "Permit detail")
             Column(

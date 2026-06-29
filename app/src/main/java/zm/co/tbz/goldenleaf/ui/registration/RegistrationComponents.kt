@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.imeNestedScroll
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
@@ -140,6 +141,7 @@ fun ScrollableFormColumn(
         modifier = modifier
             .fillMaxWidth()
             .verticalScroll(rememberScrollState())
+            .imeNestedScroll()
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
         content = content,

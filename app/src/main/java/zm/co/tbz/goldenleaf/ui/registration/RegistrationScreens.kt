@@ -20,7 +20,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Scaffold
+import zm.co.tbz.goldenleaf.ui.components.GlScaffold
+import zm.co.tbz.goldenleaf.ui.components.glVerticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -105,7 +106,7 @@ fun GrowerListScreen(
     LaunchedEffect(Unit) { viewModel.refreshGrowers() }
 
     Box(Modifier.fillMaxSize()) {
-        Scaffold(containerColor = c.bg) { padding ->
+        GlScaffold(containerColor = c.bg) { padding ->
             Column(Modifier.fillMaxSize().padding(padding)) {
                 GlScreenHeader(
                     title = "Growers",
@@ -247,7 +248,7 @@ fun GrowerUpdatesScreen(
     val queueStats by viewModel.updateQueueStats.collectAsState()
     val c = glColors()
 
-    Scaffold(containerColor = c.bg) { padding ->
+    GlScaffold(containerColor = c.bg) { padding ->
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(padding),
             contentPadding = PaddingValues(bottom = 24.dp),
@@ -382,7 +383,7 @@ fun GrowerDetailScreen(
     val returned = entity?.status == "RETURNED_FOR_CORRECTION"
     val statusLabel = entity?.status?.replace('_', ' ')?.lowercase()?.replaceFirstChar { it.titlecase() } ?: "Unknown"
 
-    Scaffold(
+    GlScaffold(
         containerColor = c.bg,
         bottomBar = {
             Row(
@@ -418,7 +419,7 @@ fun GrowerDetailScreen(
         },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
-            Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+            Column(Modifier.weight(1f).glVerticalScroll()) {
             Column(Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(c.primaryDeep, c.primary)))) {
                 Row(
                     modifier = Modifier
@@ -608,7 +609,7 @@ fun LocalRegistrationsScreen(
     val uiState by viewModel.uiState.collectAsState()
     val c = glColors()
 
-    Scaffold(containerColor = c.bg) { padding ->
+    GlScaffold(containerColor = c.bg) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
             GlScreenHeader(title = "Local registrations", subtitle = "${registrations.size} drafts on this device")
             GlFilterPills(

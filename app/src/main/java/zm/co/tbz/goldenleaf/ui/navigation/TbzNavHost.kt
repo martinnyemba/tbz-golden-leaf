@@ -1,7 +1,7 @@
 package zm.co.tbz.goldenleaf.ui.navigation
 
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
+import zm.co.tbz.goldenleaf.ui.components.GlScaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -564,7 +564,7 @@ private fun MainShell(
     var selectedTabName by rememberSaveable { mutableStateOf(GlTab.Home.name) }
     val selectedTab = GlTab.valueOf(selectedTabName)
     val c = glColors()
-    Scaffold(
+    GlScaffold(
         containerColor = c.bg,
         bottomBar = {
             GlBottomNav(
