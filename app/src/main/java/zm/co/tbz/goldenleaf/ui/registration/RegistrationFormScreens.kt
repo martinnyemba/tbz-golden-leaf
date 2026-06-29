@@ -48,6 +48,7 @@ import zm.co.tbz.goldenleaf.ui.components.GlSectionHeader
 import zm.co.tbz.goldenleaf.ui.components.GlStepper
 import zm.co.tbz.goldenleaf.ui.components.GlTextField
 import zm.co.tbz.goldenleaf.ui.components.GlTone
+import zm.co.tbz.goldenleaf.ui.components.NrcScanButton
 import zm.co.tbz.goldenleaf.ui.components.glColors
 
 @Composable
@@ -165,6 +166,10 @@ private fun PersonalDetailsStep(
         GlTextField(personal.middleName, { onPersonalChange(personal.copy(middleName = it)) }, label = "Middle name")
         GlTextField(personal.lastName, { onPersonalChange(personal.copy(lastName = it)) }, label = "Last name", required = true)
         GlTextField(personal.nrcNumber, { onPersonalChange(personal.copy(nrcNumber = it)) }, label = "NRC / Passport / PACRA", required = true, error = errors["nrcNumber"])
+        NrcScanButton(
+            onScan = { onPersonalChange(personal.copy(nrcNumber = it)) },
+            modifier = Modifier.fillMaxWidth(),
+        )
         GlDropdownField("Sex", GrowerFormChoices.sexOptions, personal.sex, { onPersonalChange(personal.copy(sex = it)) })
         GlTextField(personal.dateOfBirth, { onPersonalChange(personal.copy(dateOfBirth = it)) }, label = "Date of birth (YYYY-MM-DD)", placeholder = "YYYY-MM-DD")
         GlDropdownField("Category", GrowerFormChoices.categories, personal.category, { onPersonalChange(personal.copy(category = it)) })
