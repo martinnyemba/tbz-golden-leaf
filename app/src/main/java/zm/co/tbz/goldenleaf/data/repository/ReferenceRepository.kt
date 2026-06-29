@@ -3,12 +3,16 @@ package zm.co.tbz.goldenleaf.data.repository
 import kotlinx.coroutines.flow.Flow
 import zm.co.tbz.goldenleaf.data.local.dao.ReferenceDao
 import zm.co.tbz.goldenleaf.data.local.entity.*
+import zm.co.tbz.goldenleaf.data.local.preferences.UserPreferences
+import zm.co.tbz.goldenleaf.data.remote.api.TrmcsApi
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class ReferenceRepository @Inject constructor(
-    private val referenceDao: ReferenceDao
+    private val referenceDao: ReferenceDao,
+    private val api: TrmcsApi,
+    private val userPreferences: UserPreferences,
 ) {
     fun observeProvinces(): Flow<List<ProvinceEntity>> = referenceDao.observeProvinces()
     suspend fun upsertProvinces(provinces: List<ProvinceEntity>) = referenceDao.upsertProvinces(provinces)
@@ -30,4 +34,26 @@ class ReferenceRepository @Inject constructor(
 
     fun observeBarnTypes(): Flow<List<BarnTypeEntity>> = referenceDao.observeBarnTypes()
     suspend fun upsertBarnTypes(types: List<BarnTypeEntity>) = referenceDao.upsertBarnTypes(types)
+
+    /**
+     * Fetches the full reference bundle (provinces, districts, sponsors, sales
+     * floors, buyers, tobacco/crop types, barn types) and caches it locally.
+     * Returns true on success. Safe to call repeatedly; the 401 path is handled
+     * by the OkHttp token authenticator so an expired session is refreshed and
+     * the call retried transparently.
+     */
+    suspend fun refreshReference(): Boolean = try {
+        val bundle = api.reference()
+        upsertProvinces(bundle.provinces.map { ProvinceEntity(it.id, it.name, it.code) })
+        upsertDistricts(bundle.districts.map { DistrictEntity(it.id, it.name, it.province_id) })
+        upsertSponsors(bundle.sponsors.map { SponsorEntity(it.id, it.name) })
+        upsertSalesFloors(bundle.salesfloors.map { SalesFloorEntity(it.id, it.name, it.location) })
+        upsertBuyers(bundle.buyers.map { BuyerEntity(it.id, it.name) })
+        upsertTobaccoTypes(bundle.tobacco_types.map { TobaccoTypeEntity(it.id, it.name, it.code) })
+        upsertBarnTypes(bundle.barn_types.map { BarnTypeEntity(it.id, it.name) })
+        userPreferences.setReferenceVersion(bundle.version)
+        true
+    } catch (_: Exception) {
+        false
+    }
 }
