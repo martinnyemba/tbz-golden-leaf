@@ -11,10 +11,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -25,17 +23,32 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.google.android.gms.location.LocationServices
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 import zm.co.tbz.goldenleaf.ui.components.ErrorText
-import zm.co.tbz.goldenleaf.ui.components.InfoBanner
-import zm.co.tbz.goldenleaf.ui.components.TbzTopBar
+import zm.co.tbz.goldenleaf.ui.components.GlAccent
+import zm.co.tbz.goldenleaf.ui.components.GlBanner
+import zm.co.tbz.goldenleaf.ui.components.GlButton
+import zm.co.tbz.goldenleaf.ui.components.GlButtonSize
+import zm.co.tbz.goldenleaf.ui.components.GlButtonVariant
+import zm.co.tbz.goldenleaf.ui.components.GlCard
+import zm.co.tbz.goldenleaf.ui.components.GlDropdownField
+import zm.co.tbz.goldenleaf.ui.components.GlIcon
+import zm.co.tbz.goldenleaf.ui.components.GlScreenHeader
+import zm.co.tbz.goldenleaf.ui.components.GlSectionHeader
+import zm.co.tbz.goldenleaf.ui.components.GlStepper
+import zm.co.tbz.goldenleaf.ui.components.GlTextField
+import zm.co.tbz.goldenleaf.ui.components.GlTone
+import zm.co.tbz.goldenleaf.ui.components.glColors
 
 @Composable
 fun NewGrowerRegistrationScreen(
@@ -50,24 +63,22 @@ fun NewGrowerRegistrationScreen(
     val personal = uiState.personal
     val crop = uiState.crop
     val districts by viewModel.districtsForProvince(personal.provinceId).collectAsState(initial = emptyList())
+    val c = glColors()
 
-    Scaffold(topBar = {
-        TbzTopBar(
-            if (uiState.registrationStep == 1) "Registration — Personal" else "Registration — Crop",
-        )
-    }) { padding ->
+    Scaffold(containerColor = c.bg) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
-            LinearProgressIndicator(
-                progress = { if (uiState.registrationStep == 1) 0.5f else 1f },
-                modifier = Modifier.fillMaxWidth(),
+            GlScreenHeader(
+                title = "New registration",
+                subtitle = if (uiState.registrationStep == 1) "Personal details" else "Crop details",
             )
+            GlStepper(step = uiState.registrationStep, total = 2)
             when (uiState.registrationStep) {
                 1 -> PersonalDetailsStep(
                     personal = personal,
                     errors = uiState.personalErrors,
                     provinces = provinces.map { it.id to it.name },
                     districts = districts.map { it.id to it.name },
-                    onPersonalChange = { viewModel.updatePersonal { it } },
+                    onPersonalChange = { updated -> viewModel.updatePersonal { updated } },
                     onNext = { viewModel.goToCropStep() },
                     onCancel = onSaved,
                 )
@@ -77,7 +88,7 @@ fun NewGrowerRegistrationScreen(
                     tobaccoTypes = tobaccoTypes.map { it.id to it.name },
                     sponsors = sponsors.map { it.id to it.name },
                     barnTypes = barnTypes.map { it.id to it.name },
-                    onCropChange = { viewModel.updateCrop { it } },
+                    onCropChange = { updated -> viewModel.updateCrop { updated } },
                     onBack = { viewModel.goToPersonalStep() },
                     onSubmit = { viewModel.submitRegistration { onSaved() } },
                     isSaving = uiState.isSaving,
@@ -138,39 +149,50 @@ private fun PersonalDetailsStep(
     }
 
     ScrollableFormColumn {
-        TbzRadioGroup(
-            label = "Grower type",
-            options = GrowerFormChoices.growerTypes,
-            selected = personal.growerType,
-            onSelected = { onPersonalChange(personal.copy(growerType = it)) },
-        )
-        FormTextField(personal.firstName, { onPersonalChange(personal.copy(firstName = it)) }, "First name", error = errors["firstName"])
-        FormTextField(personal.middleName, { onPersonalChange(personal.copy(middleName = it)) }, "Middle name")
-        FormTextField(personal.lastName, { onPersonalChange(personal.copy(lastName = it)) }, "Last name")
-        FormTextField(personal.nrcNumber, { onPersonalChange(personal.copy(nrcNumber = it)) }, "NRC / Passport / PACRA", error = errors["nrcNumber"])
-        TbzDropdownField("Sex", GrowerFormChoices.sexOptions, personal.sex, { onPersonalChange(personal.copy(sex = it)) })
-        FormTextField(personal.dateOfBirth, { onPersonalChange(personal.copy(dateOfBirth = it)) }, "Date of birth (YYYY-MM-DD)")
-        TbzDropdownField("Category", GrowerFormChoices.categories, personal.category, { onPersonalChange(personal.copy(category = it)) })
-        TbzDropdownField("Country", GrowerFormChoices.phoneCountries, personal.country, { onPersonalChange(personal.copy(country = it)) })
-        FormTextField(personal.localPhone, { onPersonalChange(personal.copy(localPhone = it)) }, "Local phone number", error = errors["localPhone"])
-        FormTextField(personal.email, { onPersonalChange(personal.copy(email = it)) }, "Email")
-        FormTextField(personal.address, { onPersonalChange(personal.copy(address = it)) }, "Address / farm / plot", error = errors["address"])
-        FormTextField(personal.townVillage, { onPersonalChange(personal.copy(townVillage = it)) }, "Town / village", error = errors["townVillage"])
-        TbzDropdownField("Province", provinces, personal.provinceId, {
+        GlSectionHeader(title = "Grower type")
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            GrowerFormChoices.growerTypes.forEach { (value, label) ->
+                GrowerTypeOption(
+                    label = label,
+                    icon = if (value == "COMPANY") "building" else "profile",
+                    selected = personal.growerType == value,
+                    onClick = { onPersonalChange(personal.copy(growerType = value)) },
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
+        GlTextField(personal.firstName, { onPersonalChange(personal.copy(firstName = it)) }, label = "First name", required = true, error = errors["firstName"])
+        GlTextField(personal.middleName, { onPersonalChange(personal.copy(middleName = it)) }, label = "Middle name")
+        GlTextField(personal.lastName, { onPersonalChange(personal.copy(lastName = it)) }, label = "Last name", required = true)
+        GlTextField(personal.nrcNumber, { onPersonalChange(personal.copy(nrcNumber = it)) }, label = "NRC / Passport / PACRA", required = true, error = errors["nrcNumber"])
+        GlDropdownField("Sex", GrowerFormChoices.sexOptions, personal.sex, { onPersonalChange(personal.copy(sex = it)) })
+        GlTextField(personal.dateOfBirth, { onPersonalChange(personal.copy(dateOfBirth = it)) }, label = "Date of birth (YYYY-MM-DD)", placeholder = "YYYY-MM-DD")
+        GlDropdownField("Category", GrowerFormChoices.categories, personal.category, { onPersonalChange(personal.copy(category = it)) })
+        GlDropdownField("Country", GrowerFormChoices.phoneCountries, personal.country, { onPersonalChange(personal.copy(country = it)) })
+        GlTextField(personal.localPhone, { onPersonalChange(personal.copy(localPhone = it)) }, label = "Local phone number", leadingIcon = "mail", required = true, error = errors["localPhone"])
+        GlTextField(personal.email, { onPersonalChange(personal.copy(email = it)) }, label = "Email")
+        GlTextField(personal.address, { onPersonalChange(personal.copy(address = it)) }, label = "Address / farm / plot", required = true, error = errors["address"])
+        GlTextField(personal.townVillage, { onPersonalChange(personal.copy(townVillage = it)) }, label = "Town / village", required = true, error = errors["townVillage"])
+        GlDropdownField("Province", provinces, personal.provinceId, {
             onPersonalChange(personal.copy(provinceId = it, districtId = ""))
         })
-        TbzDropdownField("District", districts, personal.districtId, { onPersonalChange(personal.copy(districtId = it)) }, enabled = personal.provinceId.isNotBlank())
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FormTextField(personal.gpsLatitude, { onPersonalChange(personal.copy(gpsLatitude = it)) }, "GPS latitude", modifier = Modifier.weight(1f))
-            FormTextField(personal.gpsLongitude, { onPersonalChange(personal.copy(gpsLongitude = it)) }, "GPS longitude", modifier = Modifier.weight(1f))
+        GlDropdownField("District", districts, personal.districtId, { onPersonalChange(personal.copy(districtId = it)) }, enabled = personal.provinceId.isNotBlank())
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            GlTextField(personal.gpsLatitude, { onPersonalChange(personal.copy(gpsLatitude = it)) }, label = "GPS latitude", modifier = Modifier.weight(1f))
+            GlTextField(personal.gpsLongitude, { onPersonalChange(personal.copy(gpsLongitude = it)) }, label = "GPS longitude", modifier = Modifier.weight(1f))
         }
-        OutlinedButton(onClick = {
-            permissionLauncher.launch(
-                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION),
-            )
-        }) { Text("Capture GPS") }
+        GlButton(
+            text = "Capture GPS",
+            onClick = {
+                permissionLauncher.launch(
+                    arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION),
+                )
+            },
+            variant = GlButtonVariant.Outline,
+            leadingIcon = "gps",
+        )
 
-        FormSectionTitle("Documents")
+        GlSectionHeader(title = "Documents")
         PhotoPickRow("Profile photo", personal.profilePhotoPath, errors["profilePhoto"]) {
             photoTarget = "profile"
             photoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
@@ -184,7 +206,10 @@ private fun PersonalDetailsStep(
             photoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
         }
 
-        FormActionRow("Next", onNext, secondaryLabel = "Cancel", onSecondary = onCancel)
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            GlButton(text = "Cancel", onClick = onCancel, variant = GlButtonVariant.Outline, modifier = Modifier.weight(1f))
+            GlButton(text = "Next", onClick = onNext, modifier = Modifier.weight(1f))
+        }
     }
 }
 
@@ -205,7 +230,7 @@ private fun CropDetailsStep(
     val yieldPerHa = hectarage?.let { calculateYieldPerHa(it) }
 
     ScrollableFormColumn {
-        TbzDropdownField("Crop type", tobaccoTypes, crop.tobaccoTypeId, { onCropChange(crop.copy(tobaccoTypeId = it)) })
+        GlDropdownField("Crop type", tobaccoTypes, crop.tobaccoTypeId, { onCropChange(crop.copy(tobaccoTypeId = it)) }, required = true)
         SelfSponsoredCheckbox(
             checked = crop.isSelfSponsored,
             onCheckedChange = { checked ->
@@ -213,28 +238,56 @@ private fun CropDetailsStep(
             },
         )
         if (!crop.isSelfSponsored) {
-            TbzDropdownField("Sponsor", sponsors, crop.sponsorId.orEmpty(), { onCropChange(crop.copy(sponsorId = it)) })
-            errors["sponsorId"]?.let { ErrorText(it) }
+            GlDropdownField("Sponsor", sponsors, crop.sponsorId.orEmpty(), { onCropChange(crop.copy(sponsorId = it)) }, error = errors["sponsorId"])
         }
-        FormTextField(crop.hectarage, { onCropChange(crop.copy(hectarage = it)) }, "Hectarage", error = errors["hectarage"])
+        GlTextField(crop.hectarage, { onCropChange(crop.copy(hectarage = it)) }, label = "Hectarage", required = true, error = errors["hectarage"])
         yieldPerHa?.let {
-            Text("Yield per ha: $it kg/ha", style = MaterialTheme.typography.bodyMedium)
+            GlBanner(title = "Estimated yield: $it kg/ha", tone = GlTone.Info, icon = "info")
         }
-        FormTextField(crop.numberOfBarns, { onCropChange(crop.copy(numberOfBarns = it)) }, "Number of barns", error = errors["numberOfBarns"])
-        TbzDropdownField("Barn type", barnTypes, crop.barnTypeId, { onCropChange(crop.copy(barnTypeId = it)) })
-        FormTextField(crop.stringsPerBarn, { onCropChange(crop.copy(stringsPerBarn = it)) }, "Strings per barn", error = errors["stringsPerBarn"])
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FormTextField(crop.gpsLatitude, { onCropChange(crop.copy(gpsLatitude = it)) }, "GPS latitude", modifier = Modifier.weight(1f))
-            FormTextField(crop.gpsLongitude, { onCropChange(crop.copy(gpsLongitude = it)) }, "GPS longitude", modifier = Modifier.weight(1f))
+        GlTextField(crop.numberOfBarns, { onCropChange(crop.copy(numberOfBarns = it)) }, label = "Number of barns", error = errors["numberOfBarns"])
+        GlDropdownField("Barn type", barnTypes, crop.barnTypeId, { onCropChange(crop.copy(barnTypeId = it)) })
+        GlTextField(crop.stringsPerBarn, { onCropChange(crop.copy(stringsPerBarn = it)) }, label = "Strings per barn", error = errors["stringsPerBarn"])
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            GlTextField(crop.gpsLatitude, { onCropChange(crop.copy(gpsLatitude = it)) }, label = "GPS latitude", modifier = Modifier.weight(1f))
+            GlTextField(crop.gpsLongitude, { onCropChange(crop.copy(gpsLongitude = it)) }, label = "GPS longitude", modifier = Modifier.weight(1f))
         }
         saveError?.let { ErrorText(it) }
-        FormActionRow(
-            primaryLabel = if (isSaving) "Saving…" else "Save & queue sync",
-            onPrimary = onSubmit,
-            secondaryLabel = "Back",
-            onSecondary = onBack,
-            primaryEnabled = !isSaving,
-        )
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            GlButton(text = "Back", onClick = onBack, variant = GlButtonVariant.Outline, enabled = !isSaving, modifier = Modifier.weight(1f))
+            GlButton(
+                text = if (isSaving) "Saving…" else "Save & queue sync",
+                onClick = onSubmit,
+                enabled = !isSaving,
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
+}
+
+@Composable
+private fun GrowerTypeOption(
+    label: String,
+    icon: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val c = glColors()
+    GlCard(
+        modifier = modifier,
+        onClick = onClick,
+        accent = if (selected) GlAccent.Primary else GlAccent.None,
+        contentPadding = 14.dp,
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            GlIcon(icon, size = 26.dp, tint = if (selected) c.primary else c.textMuted)
+            Text(
+                label,
+                color = if (selected) c.primary else c.text,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
     }
 }
 
@@ -245,20 +298,28 @@ private fun PhotoPickRow(
     error: String?,
     onPick: () -> Unit,
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-        Column {
-            Text(label)
-            Text(
-                path?.let { "Selected" } ?: "Not selected",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            error?.let { ErrorText(it) }
+    Column {
+        GlCard(contentPadding = 12.dp) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    GlIcon(if (path != null) "check-circle" else "camera", size = 20.dp, tint = if (path != null) glColors().success else glColors().textMuted)
+                    Column {
+                        Text(label, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = glColors().text)
+                        Text(
+                            if (path != null) "Selected" else "Not selected",
+                            fontSize = 12.sp,
+                            color = glColors().textMuted,
+                        )
+                    }
+                }
+                GlButton(text = if (path != null) "Replace" else "Upload", onClick = onPick, variant = GlButtonVariant.Outline, size = GlButtonSize.Sm, fillMaxWidth = false)
+            }
         }
-        OutlinedButton(onClick = onPick) { Text("Upload") }
+        error?.let { ErrorText(it, Modifier.padding(top = 4.dp, start = 4.dp)) }
     }
 }
 
@@ -273,36 +334,38 @@ fun GrowerEditScreen(
     val provinces by viewModel.provinces.collectAsState()
     val personal = uiState.personal
     val districts by viewModel.districtsForProvince(personal.provinceId).collectAsState(initial = emptyList())
+    val c = glColors()
 
     LaunchedEffect(grower?.local_id) {
         grower?.let { viewModel.loadPersonalFromGrower(it) }
     }
 
-    Scaffold(topBar = { TbzTopBar("Edit Grower") }) { padding ->
+    Scaffold(containerColor = c.bg) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
+            GlScreenHeader(title = "Edit grower")
             ScrollableFormColumn {
-                FormTextField(personal.firstName, { v -> viewModel.updatePersonal { it.copy(firstName = v) } }, "First name", error = uiState.personalErrors["firstName"])
-                FormTextField(personal.middleName, { v -> viewModel.updatePersonal { it.copy(middleName = v) } }, "Middle name")
-                FormTextField(personal.lastName, { v -> viewModel.updatePersonal { it.copy(lastName = v) } }, "Last name")
-                FormTextField(personal.nrcNumber, { v -> viewModel.updatePersonal { it.copy(nrcNumber = v) } }, "NRC / PACRA")
-                TbzDropdownField("Sex", GrowerFormChoices.sexOptions, personal.sex, { v -> viewModel.updatePersonal { it.copy(sex = v) } })
-                FormTextField(personal.dateOfBirth, { v -> viewModel.updatePersonal { it.copy(dateOfBirth = v) } }, "Date of birth")
-                FormTextField(personal.localPhone, { v -> viewModel.updatePersonal { it.copy(localPhone = v) } }, "Phone")
-                FormTextField(personal.email, { v -> viewModel.updatePersonal { it.copy(email = v) } }, "Email")
-                FormTextField(personal.address, { v -> viewModel.updatePersonal { it.copy(address = v) } }, "Address")
-                FormTextField(personal.townVillage, { v -> viewModel.updatePersonal { it.copy(townVillage = v) } }, "Town / village")
-                TbzDropdownField("Province", provinces.map { it.id to it.name }, personal.provinceId, { v ->
+                GlTextField(personal.firstName, { v -> viewModel.updatePersonal { it.copy(firstName = v) } }, label = "First name", required = true, error = uiState.personalErrors["firstName"])
+                GlTextField(personal.middleName, { v -> viewModel.updatePersonal { it.copy(middleName = v) } }, label = "Middle name")
+                GlTextField(personal.lastName, { v -> viewModel.updatePersonal { it.copy(lastName = v) } }, label = "Last name", required = true)
+                GlTextField(personal.nrcNumber, { v -> viewModel.updatePersonal { it.copy(nrcNumber = v) } }, label = "NRC / PACRA", required = true)
+                GlDropdownField("Sex", GrowerFormChoices.sexOptions, personal.sex, { v -> viewModel.updatePersonal { it.copy(sex = v) } })
+                GlTextField(personal.dateOfBirth, { v -> viewModel.updatePersonal { it.copy(dateOfBirth = v) } }, label = "Date of birth")
+                GlTextField(personal.localPhone, { v -> viewModel.updatePersonal { it.copy(localPhone = v) } }, label = "Phone")
+                GlTextField(personal.email, { v -> viewModel.updatePersonal { it.copy(email = v) } }, label = "Email")
+                GlTextField(personal.address, { v -> viewModel.updatePersonal { it.copy(address = v) } }, label = "Address")
+                GlTextField(personal.townVillage, { v -> viewModel.updatePersonal { it.copy(townVillage = v) } }, label = "Town / village")
+                GlDropdownField("Province", provinces.map { it.id to it.name }, personal.provinceId, { v ->
                     viewModel.updatePersonal { it.copy(provinceId = v, districtId = "") }
                 })
-                TbzDropdownField("District", districts.map { it.id to it.name }, personal.districtId, { v ->
+                GlDropdownField("District", districts.map { it.id to it.name }, personal.districtId, { v ->
                     viewModel.updatePersonal { it.copy(districtId = v) }
                 })
                 uiState.saveError?.let { ErrorText(it) }
-                Button(
+                GlButton(
+                    text = if (uiState.isSaving) "Saving…" else "Save changes",
                     onClick = { viewModel.saveGrowerEdit(localId, onSaved) },
-                    modifier = Modifier.fillMaxWidth(),
                     enabled = !uiState.isSaving,
-                ) { Text(if (uiState.isSaving) "Saving…" else "Save changes") }
+                )
             }
         }
     }
@@ -319,31 +382,39 @@ fun GrowerCorrectionScreen(
     val provinces by viewModel.provinces.collectAsState()
     val personal = uiState.personal
     val districts by viewModel.districtsForProvince(personal.provinceId).collectAsState(initial = emptyList())
+    val c = glColors()
 
     LaunchedEffect(grower?.local_id) {
         grower?.let { viewModel.loadPersonalFromGrower(it) }
     }
 
-    Scaffold(topBar = { TbzTopBar("Fix & Resubmit") }) { padding ->
+    Scaffold(containerColor = c.bg) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
-            InfoBanner("Status: RETURNED_FOR_CORRECTION — update fields and resubmit for review.")
+            GlScreenHeader(title = "Fix & resubmit")
             ScrollableFormColumn {
-                FormTextField(personal.firstName, { v -> viewModel.updatePersonal { it.copy(firstName = v) } }, "First name")
-                FormTextField(personal.lastName, { v -> viewModel.updatePersonal { it.copy(lastName = v) } }, "Last name")
-                FormTextField(personal.nrcNumber, { v -> viewModel.updatePersonal { it.copy(nrcNumber = v) } }, "NRC")
-                FormTextField(personal.address, { v -> viewModel.updatePersonal { it.copy(address = v) } }, "Address")
-                TbzDropdownField("Province", provinces.map { it.id to it.name }, personal.provinceId, { v ->
+                GlBanner(
+                    title = "Returned for correction",
+                    subtitle = "Update the flagged fields below and resubmit for review.",
+                    tone = GlTone.Gold,
+                    icon = "warning",
+                )
+                GlTextField(personal.firstName, { v -> viewModel.updatePersonal { it.copy(firstName = v) } }, label = "First name")
+                GlTextField(personal.lastName, { v -> viewModel.updatePersonal { it.copy(lastName = v) } }, label = "Last name")
+                GlTextField(personal.nrcNumber, { v -> viewModel.updatePersonal { it.copy(nrcNumber = v) } }, label = "NRC")
+                GlTextField(personal.address, { v -> viewModel.updatePersonal { it.copy(address = v) } }, label = "Address")
+                GlDropdownField("Province", provinces.map { it.id to it.name }, personal.provinceId, { v ->
                     viewModel.updatePersonal { it.copy(provinceId = v, districtId = "") }
                 })
-                TbzDropdownField("District", districts.map { it.id to it.name }, personal.districtId, { v ->
+                GlDropdownField("District", districts.map { it.id to it.name }, personal.districtId, { v ->
                     viewModel.updatePersonal { it.copy(districtId = v) }
                 })
                 uiState.saveError?.let { ErrorText(it) }
-                Button(
+                GlButton(
+                    text = if (uiState.isSaving) "Submitting…" else "Save & resubmit",
                     onClick = { viewModel.resubmitCorrection(localId, onDone) },
-                    modifier = Modifier.fillMaxWidth(),
+                    variant = GlButtonVariant.Gold,
                     enabled = !uiState.isSaving,
-                ) { Text(if (uiState.isSaving) "Submitting…" else "Save & resubmit") }
+                )
             }
         }
     }
@@ -360,16 +431,18 @@ fun CropAllocationScreen(
     val tobaccoTypes by viewModel.tobaccoTypes.collectAsState()
     val sponsors by viewModel.sponsors.collectAsState()
     val barnTypes by viewModel.barnTypes.collectAsState()
+    val c = glColors()
 
-    Scaffold(topBar = { TbzTopBar("Crop allocation") }) { padding ->
+    Scaffold(containerColor = c.bg) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
+            GlScreenHeader(title = "Crop allocation")
             CropDetailsStep(
                 crop = crop,
                 errors = uiState.cropErrors,
                 tobaccoTypes = tobaccoTypes.map { it.id to it.name },
                 sponsors = sponsors.map { it.id to it.name },
                 barnTypes = barnTypes.map { it.id to it.name },
-                onCropChange = { viewModel.updateCrop { it } },
+                onCropChange = { updated -> viewModel.updateCrop { updated } },
                 onBack = onSaved,
                 onSubmit = { viewModel.submitCropAllocation(growerLocalId, onSaved) },
                 isSaving = uiState.isSaving,

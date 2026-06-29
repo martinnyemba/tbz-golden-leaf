@@ -61,9 +61,11 @@ import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.LocalShipping
 import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Apartment
 import androidx.compose.material.icons.outlined.MailOutline
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.outlined.Menu
+import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Place
@@ -174,6 +176,10 @@ fun glIconFor(name: String, filled: Boolean = false): ImageVector = when (name) 
     "leaf", "plant" -> Icons.Outlined.Eco
     "plus" -> Icons.Outlined.Add
     "x" -> Icons.Outlined.Close
+    "more" -> Icons.Outlined.MoreVert
+    "building" -> Icons.Outlined.Apartment
+    "badge" -> Icons.Outlined.Assignment
+    "flash" -> Icons.Outlined.Tune
     else -> Icons.Outlined.Circle
 }
 
@@ -404,6 +410,74 @@ fun GlTextField(
                 fontSize = 12.sp,
                 modifier = Modifier.padding(start = 16.dp),
             )
+        }
+    }
+}
+
+/** Dropdown/select field styled to match [GlTextField]. */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+fun GlDropdownField(
+    label: String,
+    options: List<Pair<String, String>>,
+    selectedId: String,
+    onSelected: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    placeholder: String = "Select",
+    required: Boolean = false,
+    error: String? = null,
+    enabled: Boolean = true,
+) {
+    val c = glColors()
+    var expanded by remember { mutableStateOf(false) }
+    val selectedLabel = options.firstOrNull { it.first == selectedId }?.second
+    val borderColor = if (error != null) c.danger else Color.Transparent
+    val shape = RoundedCornerShape(28.dp)
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(modifier = Modifier.padding(start = 4.dp)) {
+            Text(label, color = c.textMuted, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+            if (required) Text(" *", color = c.danger, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+        }
+        androidx.compose.material3.ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = { if (enabled) expanded = it },
+        ) {
+            Row(
+                modifier = Modifier
+                    .menuAnchor(androidx.compose.material3.MenuAnchorType.PrimaryNotEditable)
+                    .fillMaxWidth()
+                    .height(56.dp)
+                    .clip(shape)
+                    .background(c.surfaceAlt)
+                    .border(1.5.dp, borderColor, shape)
+                    .padding(horizontal = 18.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+                    Text(
+                        text = selectedLabel ?: placeholder,
+                        color = if (selectedLabel != null) c.text else c.placeholder,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Medium,
+                    )
+                }
+                GlIcon("chevron-down", size = 20.dp, tint = c.textMuted)
+            }
+            androidx.compose.material3.ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                options.forEach { (id, name) ->
+                    androidx.compose.material3.DropdownMenuItem(
+                        text = { Text(name) },
+                        onClick = {
+                            onSelected(id)
+                            expanded = false
+                        },
+                    )
+                }
+            }
+        }
+        if (error != null) {
+            Text(error, color = c.danger, fontSize = 12.sp, modifier = Modifier.padding(start = 16.dp))
         }
     }
 }

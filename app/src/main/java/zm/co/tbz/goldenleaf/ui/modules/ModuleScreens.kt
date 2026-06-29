@@ -1,16 +1,21 @@
 package zm.co.tbz.goldenleaf.ui.modules
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import zm.co.tbz.goldenleaf.ui.components.ModuleHubCard
-import zm.co.tbz.goldenleaf.ui.components.TbzTopBar
+import androidx.compose.ui.unit.sp
+import zm.co.tbz.goldenleaf.ui.components.GlCard
+import zm.co.tbz.goldenleaf.ui.components.GlDivider
+import zm.co.tbz.goldenleaf.ui.components.GlRow
+import zm.co.tbz.goldenleaf.ui.components.GlScreenHeader
+import zm.co.tbz.goldenleaf.ui.components.glColors
 import zm.co.tbz.goldenleaf.ui.search.GlobalSearchScreen
 
 @Composable
@@ -40,49 +45,49 @@ fun MenuScreen(
     canPermits: Boolean = true,
     canArbitration: Boolean = true,
 ) {
-    Scaffold(topBar = { TbzTopBar("More") }) { padding ->
-        Column(
-            Modifier.fillMaxSize().padding(padding).padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            if (canRegistration) {
-                ModuleHubCard("Registration", "Grower registration & corrections", onRegistration)
+    val c = glColors()
+    Scaffold(containerColor = c.bg) { padding ->
+        Column(Modifier.fillMaxSize().padding(padding)) {
+            GlScreenHeader(title = "More")
+            Column(Modifier.fillMaxSize().padding(16.dp)) {
+                GlCard(contentPadding = 0.dp) {
+                    Column {
+                        val rows = buildList {
+                            if (canRegistration) add(Triple("Registration", "Grower registration & corrections", "users" to onRegistration))
+                            if (canInspection) add(Triple("Inspection", "Schedules, reports, validation", "check-circle" to onInspection))
+                            if (canMarketing) add(Triple("Marketing & Sales", "Bale capture & pending sales", "bale" to onMarketing))
+                            if (canPermits) add(Triple("Permits", "Transport & group permits", "permit" to onPermits))
+                            if (canArbitration) add(Triple("Arbitration", "Bale arbitration submissions", "warning" to onArbitration))
+                            if (canRegistration) add(Triple("Season renewal", "Update grower crop allocation", "sync" to onRenewal))
+                            add(Triple("Notifications", "Alerts and system messages", "bell" to onNotifications))
+                            add(Triple("Sync settings", "Offline queue & manual sync", "cloud-up" to onSyncSettings))
+                        }
+                        rows.forEachIndexed { index, (title, subtitle, iconAndAction) ->
+                            val (icon, action) = iconAndAction
+                            GlRow(title = title, subtitle = subtitle, leadingIcon = icon, onClick = action)
+                            if (index < rows.lastIndex) GlDivider()
+                        }
+                    }
+                }
             }
-            if (canInspection) {
-                ModuleHubCard("Inspection", "Schedules, reports, validation", onInspection)
-            }
-            if (canMarketing) {
-                ModuleHubCard("Marketing & Sales", "Bale capture & pending sales", onMarketing)
-            }
-            if (canPermits) {
-                ModuleHubCard("Permits", "Transport & group permits", onPermits)
-            }
-            if (canArbitration) {
-                ModuleHubCard("Arbitration", "Bale arbitration submissions", onArbitration)
-            }
-            if (canRegistration) {
-                ModuleHubCard("Season renewal", "Update grower crop allocation", onRenewal)
-            }
-            ModuleHubCard("Notifications", "Alerts and system messages", onNotifications)
-            ModuleHubCard("Sync settings", "Offline queue & manual sync", onSyncSettings)
-        }
-    }
-}
-
-@Composable
-fun InspectionHubScreen() {
-    Scaffold(topBar = { TbzTopBar("Inspection") }) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
-            Text("Use the Inspection module from the main menu.")
         }
     }
 }
 
 @Composable
 fun StaticContentScreen(title: String, body: String) {
-    Scaffold(topBar = { TbzTopBar(title) }) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
-            Text(body)
+    val c = glColors()
+    Scaffold(containerColor = c.bg) { padding ->
+        Column(Modifier.fillMaxSize().padding(padding)) {
+            GlScreenHeader(title = title)
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
+            ) {
+                Text(body, color = c.text, fontSize = 14.sp)
+            }
         }
     }
 }

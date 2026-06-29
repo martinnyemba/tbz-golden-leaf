@@ -15,14 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -31,7 +24,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.google.android.gms.location.LocationServices
@@ -41,16 +33,31 @@ import kotlin.coroutines.resume
 import zm.co.tbz.goldenleaf.data.local.entity.InspectionEntity
 import zm.co.tbz.goldenleaf.data.local.entity.InspectionReportEntity
 import zm.co.tbz.goldenleaf.ui.components.ErrorText
-import zm.co.tbz.goldenleaf.ui.components.ModuleHubCard
-import zm.co.tbz.goldenleaf.ui.components.SyncStatusChip
-import zm.co.tbz.goldenleaf.ui.components.TbzStatCard
-import zm.co.tbz.goldenleaf.ui.components.TbzTopBar
-import zm.co.tbz.goldenleaf.ui.registration.FormActionRow
-import zm.co.tbz.goldenleaf.ui.registration.FormSectionTitle
-import zm.co.tbz.goldenleaf.ui.registration.FormTextField
+import zm.co.tbz.goldenleaf.ui.components.GlAccent
+import zm.co.tbz.goldenleaf.ui.components.GlAvatar
+import zm.co.tbz.goldenleaf.ui.components.GlBanner
+import zm.co.tbz.goldenleaf.ui.components.GlButton
+import zm.co.tbz.goldenleaf.ui.components.GlButtonSize
+import zm.co.tbz.goldenleaf.ui.components.GlButtonVariant
+import zm.co.tbz.goldenleaf.ui.components.GlCard
+import zm.co.tbz.goldenleaf.ui.components.GlDropdownField
+import zm.co.tbz.goldenleaf.ui.components.GlEmptyState
+import zm.co.tbz.goldenleaf.ui.components.GlFieldRow
+import zm.co.tbz.goldenleaf.ui.components.GlFilterPills
+import zm.co.tbz.goldenleaf.ui.components.GlIcon
+import zm.co.tbz.goldenleaf.ui.components.GlKpiTile
+import zm.co.tbz.goldenleaf.ui.components.GlPill
+import zm.co.tbz.goldenleaf.ui.components.GlPillSize
+import zm.co.tbz.goldenleaf.ui.components.GlRow
+import zm.co.tbz.goldenleaf.ui.components.GlScreenHeader
+import zm.co.tbz.goldenleaf.ui.components.GlSearchBar
+import zm.co.tbz.goldenleaf.ui.components.GlSectionHeader
+import zm.co.tbz.goldenleaf.ui.components.GlSyncChip
+import zm.co.tbz.goldenleaf.ui.components.GlTextField
+import zm.co.tbz.goldenleaf.ui.components.GlToggle
+import zm.co.tbz.goldenleaf.ui.components.GlTone
+import zm.co.tbz.goldenleaf.ui.components.glColors
 import zm.co.tbz.goldenleaf.ui.registration.ScrollableFormColumn
-import zm.co.tbz.goldenleaf.ui.registration.TbzDropdownField
-import zm.co.tbz.goldenleaf.ui.registration.TbzRadioGroup
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -66,33 +73,42 @@ fun InspectionHubScreen(
     viewModel: InspectionViewModel = hiltViewModel(),
 ) {
     val stats by viewModel.hubStats.collectAsState()
+    val c = glColors()
 
-    Scaffold(topBar = { TbzTopBar("Inspection") }) { padding ->
-        Column(
-            Modifier.fillMaxSize().padding(padding).padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TbzStatCard("Scheduled", stats.scheduled.toString(), Modifier.weight(1f))
-                TbzStatCard("In progress", stats.inProgress.toString(), Modifier.weight(1f))
+    Scaffold(containerColor = c.bg) { padding ->
+        Column(Modifier.fillMaxSize().padding(padding)) {
+            GlScreenHeader(title = "Inspections", subtitle = "Field, nursery, curing & validation")
+            Column(
+                Modifier.fillMaxSize().padding(horizontal = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp),
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        GlKpiTile("Scheduled", stats.scheduled.toString(), Modifier.weight(1f), tone = GlTone.Primary, icon = "calendar")
+                        GlKpiTile("In progress", stats.inProgress.toString(), Modifier.weight(1f), icon = "sync")
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        GlKpiTile("Completed", stats.completed.toString(), Modifier.weight(1f), tone = GlTone.Success, icon = "check-circle")
+                        GlKpiTile("High risk", stats.highRisk.toString(), Modifier.weight(1f), tone = GlTone.Danger, icon = "warning")
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        GlKpiTile("Schedules pending", stats.schedulesPendingSync.toString(), Modifier.weight(1f), tone = GlTone.Gold, icon = "cloud-up")
+                        GlKpiTile("Reports pending", stats.reportsPendingSync.toString(), Modifier.weight(1f), tone = GlTone.Gold, icon = "cloud-up")
+                    }
+                }
+                GlButton(text = "Sync now", onClick = viewModel::triggerSync, variant = GlButtonVariant.Outline, leadingIcon = "sync")
+                GlSectionHeader(title = "Quick actions")
+                GlCard(contentPadding = 4.dp) {
+                    Column {
+                        GlRow("Schedule inspection", subtitle = "Offline-first grower inspection schedule", leadingIcon = "calendar", onClick = onSchedule)
+                        GlRow("Local schedules", subtitle = "Pending and failed schedule sync", leadingIcon = "cloud-up", onClick = onLocalSchedules)
+                        GlRow("Portal inspections", subtitle = "Cached server inspections", leadingIcon = "cloud", onClick = onPortalList)
+                        GlRow("Conducted reports", subtitle = "Field, nursery, curing, validation queue", leadingIcon = "clipboard", onClick = onReports)
+                        GlRow("High-risk growers", subtitle = "Validations with risk score ≥ 70", leadingIcon = "warning", tone = GlTone.Danger, onClick = onHighRisk)
+                        GlRow("Grower lookup", subtitle = "Search cached growers for scheduling", leadingIcon = "search", onClick = onLookup)
+                    }
+                }
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TbzStatCard("Completed", stats.completed.toString(), Modifier.weight(1f))
-                TbzStatCard("High risk", stats.highRisk.toString(), Modifier.weight(1f))
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TbzStatCard("Schedules pending", stats.schedulesPendingSync.toString(), Modifier.weight(1f))
-                TbzStatCard("Reports pending", stats.reportsPendingSync.toString(), Modifier.weight(1f))
-            }
-            Button(onClick = viewModel::triggerSync, modifier = Modifier.fillMaxWidth()) {
-                Text("Sync now")
-            }
-            ModuleHubCard("Schedule inspection", "Offline-first grower inspection schedule", onSchedule)
-            ModuleHubCard("Local schedules", "Pending and failed schedule sync", onLocalSchedules)
-            ModuleHubCard("Portal inspections", "Cached server inspections", onPortalList)
-            ModuleHubCard("Conducted reports", "Field, nursery, curing, validation queue", onReports)
-            ModuleHubCard("High-risk growers", "Validations with risk score ≥ 70", onHighRisk)
-            ModuleHubCard("Grower lookup", "Search cached growers for scheduling", onLookup)
         }
     }
 }
@@ -107,103 +123,107 @@ fun ScheduleInspectionScreen(
     val growerResults by viewModel.growerSearchResults.collectAsState()
     val schedule = uiState.schedule
     val districts by viewModel.districtsForProvince(schedule.provinceId).collectAsState(initial = emptyList())
+    val c = glColors()
 
     LaunchedEffect(Unit) { viewModel.initScheduleForm() }
 
-    Scaffold(topBar = { TbzTopBar("Schedule inspection") }) { padding ->
-        ScrollableFormColumn(Modifier.padding(padding)) {
-            FormTextField(
-                value = schedule.growerSearch,
-                onValueChange = { viewModel.updateSchedule { s -> s.copy(growerSearch = it) } },
-                label = "Grower (name, TBZ ID, NRC)",
-                error = uiState.scheduleErrors["growerId"],
-            )
-            if (schedule.growerName.isNotBlank()) {
-                Row(
-                    Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Text("Selected: ${schedule.growerName}", fontWeight = FontWeight.Medium)
-                    OutlinedButton(onClick = viewModel::clearScheduleGrower) { Text("Clear") }
+    Scaffold(containerColor = c.bg) { padding ->
+        Column(Modifier.fillMaxSize().padding(padding)) {
+            GlScreenHeader(title = "Schedule inspection")
+            ScrollableFormColumn {
+                GlTextField(
+                    value = schedule.growerSearch,
+                    onValueChange = { viewModel.updateSchedule { s -> s.copy(growerSearch = it) } },
+                    label = "Grower (name, TBZ ID, NRC)",
+                    leadingIcon = "search",
+                    error = uiState.scheduleErrors["growerId"],
+                )
+                if (schedule.growerName.isNotBlank()) {
+                    GlCard(contentPadding = 12.dp) {
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            GlFieldRow(label = "Selected", value = schedule.growerName, modifier = Modifier.weight(1f))
+                        }
+                    }
+                    GlButton(text = "Clear selection", onClick = viewModel::clearScheduleGrower, variant = GlButtonVariant.Ghost, size = GlButtonSize.Sm)
                 }
-            }
-            growerResults.forEach { grower ->
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { viewModel.selectGrowerForSchedule(grower) },
-                ) {
-                    Column(Modifier.padding(12.dp)) {
-                        Text("${grower.first_name} ${grower.last_name}", fontWeight = FontWeight.SemiBold)
-                        grower.tbz_id?.let { Text("TBZ ID: $it") }
-                        Text("NRC: ${grower.nrc_number}")
+                growerResults.forEach { grower ->
+                    GlCard(onClick = { viewModel.selectGrowerForSchedule(grower) }, contentPadding = 12.dp) {
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            GlFieldRow(label = "Name", value = "${grower.first_name} ${grower.last_name}")
+                            grower.tbz_id?.let { GlFieldRow(label = "TBZ ID", value = it, mono = true) }
+                            GlFieldRow(label = "NRC", value = grower.nrc_number)
+                        }
                     }
                 }
-            }
 
-            FormTextField(
-                value = schedule.inspectorName,
-                onValueChange = { viewModel.updateSchedule { s -> s.copy(inspectorName = it) } },
-                label = "Assign inspector",
-            )
-            Text(
-                "Inspector ID: ${schedule.inspectorId.ifBlank { "signed-in user" }}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-
-            TbzDropdownField(
-                label = "Inspection type",
-                options = InspectionFormChoices.inspectionTypes,
-                selectedId = schedule.inspectionType,
-                onSelected = { viewModel.updateSchedule { s -> s.copy(inspectionType = it) } },
-            )
-
-            FormTextField(
-                value = schedule.scheduledDate,
-                onValueChange = { viewModel.updateSchedule { s -> s.copy(scheduledDate = it) } },
-                label = "Scheduled date (YYYY-MM-DD)",
-                error = uiState.scheduleErrors["scheduledDate"],
-            )
-
-            TbzDropdownField(
-                label = "Province",
-                options = provinces.map { it.id to it.name },
-                selectedId = schedule.provinceId,
-                onSelected = { viewModel.updateSchedule { s -> s.copy(provinceId = it, districtId = "") } },
-            )
-
-            if (districts.isNotEmpty()) {
-                TbzDropdownField(
-                    label = "District",
-                    options = districts.map { it.id to it.name },
-                    selectedId = schedule.districtId,
-                    onSelected = { viewModel.updateSchedule { s -> s.copy(districtId = it) } },
+                GlTextField(
+                    value = schedule.inspectorName,
+                    onValueChange = { viewModel.updateSchedule { s -> s.copy(inspectorName = it) } },
+                    label = "Assign inspector",
+                    helper = "Inspector ID: ${schedule.inspectorId.ifBlank { "signed-in user" }}",
                 )
-            } else {
-                FormTextField(
-                    value = schedule.districtText,
-                    onValueChange = { viewModel.updateSchedule { s -> s.copy(districtText = it) } },
-                    label = "District",
-                    error = uiState.scheduleErrors["districtId"],
+
+                GlDropdownField(
+                    label = "Inspection type",
+                    options = InspectionFormChoices.inspectionTypes,
+                    selectedId = schedule.inspectionType,
+                    onSelected = { viewModel.updateSchedule { s -> s.copy(inspectionType = it) } },
                 )
+
+                GlTextField(
+                    value = schedule.scheduledDate,
+                    onValueChange = { viewModel.updateSchedule { s -> s.copy(scheduledDate = it) } },
+                    label = "Scheduled date",
+                    placeholder = "YYYY-MM-DD",
+                    leadingIcon = "calendar",
+                    error = uiState.scheduleErrors["scheduledDate"],
+                )
+
+                GlDropdownField(
+                    label = "Province",
+                    options = provinces.map { it.id to it.name },
+                    selectedId = schedule.provinceId,
+                    onSelected = { viewModel.updateSchedule { s -> s.copy(provinceId = it, districtId = "") } },
+                )
+
+                if (districts.isNotEmpty()) {
+                    GlDropdownField(
+                        label = "District",
+                        options = districts.map { it.id to it.name },
+                        selectedId = schedule.districtId,
+                        onSelected = { viewModel.updateSchedule { s -> s.copy(districtId = it) } },
+                    )
+                } else {
+                    GlTextField(
+                        value = schedule.districtText,
+                        onValueChange = { viewModel.updateSchedule { s -> s.copy(districtText = it) } },
+                        label = "District",
+                        error = uiState.scheduleErrors["districtId"],
+                    )
+                }
+
+                GlTextField(
+                    value = schedule.notes,
+                    onValueChange = { viewModel.updateSchedule { s -> s.copy(notes = it) } },
+                    label = "Notes",
+                    singleLine = false,
+                    minLines = 3,
+                )
+
+                uiState.saveError?.let { ErrorText(it) }
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    GlButton(text = "Cancel", onClick = onScheduled, variant = GlButtonVariant.Outline, modifier = Modifier.weight(1f), enabled = !uiState.isSaving)
+                    GlButton(
+                        text = if (uiState.isSaving) "Saving…" else "Schedule",
+                        onClick = { viewModel.scheduleInspection { onScheduled() } },
+                        enabled = !uiState.isSaving,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
             }
-
-            FormTextField(
-                value = schedule.notes,
-                onValueChange = { viewModel.updateSchedule { s -> s.copy(notes = it) } },
-                label = "Notes",
-                singleLine = false,
-            )
-
-            uiState.saveError?.let { ErrorText(it) }
-            FormActionRow(
-                primaryLabel = if (uiState.isSaving) "Saving…" else "Schedule",
-                onPrimary = { viewModel.scheduleInspection { onScheduled() } },
-                secondaryLabel = "Cancel",
-                onSecondary = onScheduled,
-                primaryEnabled = !uiState.isSaving,
-            )
         }
     }
 }
@@ -215,25 +235,29 @@ fun LocalSchedulesScreen(
 ) {
     val schedules by viewModel.localSchedules.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
+    val c = glColors()
 
-    Scaffold(topBar = { TbzTopBar("Local schedules") }) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                InspectionFormChoices.syncFilters.forEach { filter ->
-                    FilterChip(
-                        selected = uiState.syncFilter == filter,
-                        onClick = { viewModel.onSyncFilterChange(filter) },
-                        label = { Text(filter.replaceFirstChar { it.uppercase() }) },
-                    )
-                }
+    Scaffold(containerColor = c.bg) { padding ->
+        Column(Modifier.fillMaxSize().padding(padding)) {
+            GlScreenHeader(title = "Local schedules")
+            Column(Modifier.padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                GlFilterPills(
+                    options = InspectionFormChoices.syncFilters,
+                    selected = uiState.syncFilter,
+                    onSelect = viewModel::onSyncFilterChange,
+                )
+                GlButton(text = "Sync pending", onClick = viewModel::triggerSync, variant = GlButtonVariant.Outline, leadingIcon = "sync")
             }
-            Button(
-                onClick = viewModel::triggerSync,
-                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-            ) { Text("Sync pending") }
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(schedules, key = { it.local_id }) { inspection ->
-                    InspectionScheduleRow(inspection, onClick = { onOpenDetail(inspection.local_id) })
+            if (schedules.isEmpty()) {
+                GlEmptyState(title = "No local schedules", subtitle = "Schedules you create will appear here until they sync.", icon = "calendar")
+            } else {
+                LazyColumn(
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    items(schedules, key = { it.local_id }) { inspection ->
+                        InspectionScheduleRow(inspection, onClick = { onOpenDetail(inspection.local_id) })
+                    }
                 }
             }
         }
@@ -247,35 +271,33 @@ fun InspectionPortalListScreen(
 ) {
     val inspections by viewModel.filteredInspections.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
+    val c = glColors()
 
-    Scaffold(topBar = { TbzTopBar("Portal inspections") }) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
-            OutlinedTextField(
-                value = uiState.searchQuery,
-                onValueChange = viewModel::onSearchChange,
-                label = { Text("Search grower or location") },
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Row(
-                Modifier.padding(vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                InspectionFormChoices.typeFilters.take(5).forEach { type ->
-                    FilterChip(
-                        selected = uiState.typeFilter == type,
-                        onClick = { viewModel.onTypeFilterChange(type) },
-                        label = {
-                            Text(
-                                if (type == "All") "All" else inspectionTypeLabel(type),
-                                maxLines = 1,
-                            )
-                        },
-                    )
-                }
+    Scaffold(containerColor = c.bg) { padding ->
+        Column(Modifier.fillMaxSize().padding(padding)) {
+            GlScreenHeader(title = "Portal inspections")
+            Column(Modifier.padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                GlSearchBar(
+                    value = uiState.searchQuery,
+                    onValueChange = viewModel::onSearchChange,
+                    placeholder = "Search grower or location",
+                )
+                GlFilterPills(
+                    options = InspectionFormChoices.typeFilters.take(5),
+                    selected = uiState.typeFilter,
+                    onSelect = viewModel::onTypeFilterChange,
+                )
             }
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(inspections, key = { it.local_id }) { inspection ->
-                    InspectionScheduleRow(inspection, onClick = { onOpenDetail(inspection.local_id) })
+            if (inspections.isEmpty()) {
+                GlEmptyState(title = "No inspections found", subtitle = "Try a different search or filter.", icon = "search")
+            } else {
+                LazyColumn(
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    items(inspections, key = { it.local_id }) { inspection ->
+                        InspectionScheduleRow(inspection, onClick = { onOpenDetail(inspection.local_id) })
+                    }
                 }
             }
         }
@@ -293,52 +315,58 @@ fun InspectionDetailScreen(
     viewModel: InspectionViewModel = hiltViewModel(),
 ) {
     val inspection by viewModel.observeInspection(localId).collectAsState()
+    val c = glColors()
 
     LaunchedEffect(inspection) {
         inspection?.let { viewModel.loadFormsForInspection(it) }
     }
 
-    Scaffold(topBar = { TbzTopBar("Inspection detail") }) { padding ->
-        Column(
-            Modifier.fillMaxSize().padding(padding).padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
+    Scaffold(containerColor = c.bg) { padding ->
+        Column(Modifier.fillMaxSize().padding(padding)) {
+            GlScreenHeader(title = "Inspection detail")
             val item = inspection
             if (item == null) {
-                Text("Inspection not found")
+                GlEmptyState(title = "Inspection not found", icon = "search")
             } else {
-                Text(item.grower_name ?: "Grower", fontWeight = FontWeight.Bold)
-                Text("Type: ${inspectionTypeLabel(item.inspection_type)}")
-                Text("Status: ${item.status}")
-                Text("Scheduled: ${item.scheduled_date}")
-                Text("Province: ${item.province.orEmpty()}")
-                Text("District: ${item.district.orEmpty()}")
-                item.notes?.let { Text("Notes: $it") }
-                SyncStatusChip(item.sync_status)
-                item.last_sync_error?.let { ErrorText(it) }
+                Column(
+                    Modifier.fillMaxSize().padding(horizontal = 20.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    GlCard(accent = GlAccent.Primary, contentPadding = 14.dp) {
+                        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            GlAvatar(name = item.grower_name ?: "Grower", gold = true)
+                            Column(Modifier.weight(1f)) {
+                                GlFieldRow(label = "Grower", value = item.grower_name ?: "—")
+                                GlFieldRow(label = "Type", value = inspectionTypeLabel(item.inspection_type))
+                            }
+                        }
+                    }
+                    GlCard(contentPadding = 14.dp) {
+                        Column {
+                            GlFieldRow(label = "Status", value = item.status)
+                            GlFieldRow(label = "Scheduled", value = item.scheduled_date)
+                            GlFieldRow(label = "Province", value = item.province.orEmpty().ifBlank { "—" })
+                            GlFieldRow(label = "District", value = item.district.orEmpty().ifBlank { "—" })
+                            item.notes?.let { GlFieldRow(label = "Notes", value = it) }
+                        }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        GlSyncChip(status = item.sync_status)
+                    }
+                    item.last_sync_error?.let { ErrorText(it) }
 
-                OutlinedButton(
-                    onClick = { onOpenGrower(item.grower_id) },
-                    modifier = Modifier.fillMaxWidth(),
-                ) { Text("Open grower profile") }
+                    GlButton(text = "Open grower profile", onClick = { onOpenGrower(item.grower_id) }, variant = GlButtonVariant.Outline, leadingIcon = "profile")
 
-                when (item.inspection_type) {
-                    InspectionTypes.GROWER_VALIDATION ->
-                        Button(onClick = { onStartValidation(localId) }, modifier = Modifier.fillMaxWidth()) {
-                            Text("Start grower validation")
-                        }
-                    InspectionTypes.NURSERY_INSPECTION ->
-                        Button(onClick = { onStartNursery(localId) }, modifier = Modifier.fillMaxWidth()) {
-                            Text("Start nursery inspection")
-                        }
-                    InspectionTypes.FIELD_INSPECTION ->
-                        Button(onClick = { onStartField(localId) }, modifier = Modifier.fillMaxWidth()) {
-                            Text("Start field inspection")
-                        }
-                    InspectionTypes.CURING_INSPECTION ->
-                        Button(onClick = { onStartCuring(localId) }, modifier = Modifier.fillMaxWidth()) {
-                            Text("Start curing inspection")
-                        }
+                    when (item.inspection_type) {
+                        InspectionTypes.GROWER_VALIDATION ->
+                            GlButton(text = "Start grower validation", onClick = { onStartValidation(localId) }, leadingIcon = "shield-check")
+                        InspectionTypes.NURSERY_INSPECTION ->
+                            GlButton(text = "Start nursery inspection", onClick = { onStartNursery(localId) }, leadingIcon = "leaf")
+                        InspectionTypes.FIELD_INSPECTION ->
+                            GlButton(text = "Start field inspection", onClick = { onStartField(localId) }, leadingIcon = "leaf")
+                        InspectionTypes.CURING_INSPECTION ->
+                            GlButton(text = "Start curing inspection", onClick = { onStartCuring(localId) }, leadingIcon = "building")
+                    }
                 }
             }
         }
@@ -351,28 +379,32 @@ fun InspectionReportsScreen(
 ) {
     val reports by viewModel.filteredReports.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
+    val c = glColors()
 
-    Scaffold(topBar = { TbzTopBar("Inspection reports") }) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                InspectionFormChoices.syncFilters.forEach { filter ->
-                    FilterChip(
-                        selected = uiState.syncFilter == filter,
-                        onClick = { viewModel.onSyncFilterChange(filter) },
-                        label = { Text(filter.replaceFirstChar { it.uppercase() }) },
-                    )
-                }
+    Scaffold(containerColor = c.bg) { padding ->
+        Column(Modifier.fillMaxSize().padding(padding)) {
+            GlScreenHeader(title = "Inspection reports")
+            Column(Modifier.padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                GlFilterPills(
+                    options = InspectionFormChoices.syncFilters,
+                    selected = uiState.syncFilter,
+                    onSelect = viewModel::onSyncFilterChange,
+                )
+                GlButton(text = "Sync pending reports", onClick = viewModel::triggerSync, variant = GlButtonVariant.Outline, leadingIcon = "sync")
             }
-            Button(
-                onClick = viewModel::triggerSync,
-                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-            ) { Text("Sync pending reports") }
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(reports, key = { it.local_id }) { report ->
-                    InspectionReportRow(
-                        report = report,
-                        onDelete = { viewModel.deleteReport(report) },
-                    )
+            if (reports.isEmpty()) {
+                GlEmptyState(title = "No reports yet", subtitle = "Conducted inspection reports will appear here.", icon = "clipboard")
+            } else {
+                LazyColumn(
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    items(reports, key = { it.local_id }) { report ->
+                        InspectionReportRow(
+                            report = report,
+                            onDelete = { viewModel.deleteReport(report) },
+                        )
+                    }
                 }
             }
         }
@@ -385,26 +417,48 @@ fun HighRiskGrowersScreen(
 ) {
     val rows by viewModel.highRiskValidations.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
+    val c = glColors()
 
-    Scaffold(topBar = { TbzTopBar("High-risk growers") }) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
-            OutlinedTextField(
-                value = uiState.highRiskSearch,
-                onValueChange = viewModel::onHighRiskSearchChange,
-                label = { Text("Search grower or NRC") },
-                modifier = Modifier.fillMaxWidth(),
-            )
-            LazyColumn(
-                modifier = Modifier.padding(top = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                items(rows, key = { it.validationLocalId }) { row ->
-                    Card(Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(16.dp)) {
-                            Text(row.growerName, fontWeight = FontWeight.SemiBold)
-                            Text("NRC: ${row.nrcNumber}")
-                            Text("${row.province} / ${row.district}")
-                            Text("Risk score: ${row.riskScore}", fontWeight = FontWeight.Bold)
+    Scaffold(containerColor = c.bg) { padding ->
+        Column(Modifier.fillMaxSize().padding(padding)) {
+            GlScreenHeader(title = "High-risk growers", subtitle = "${rows.size} flagged")
+            Column(Modifier.padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                GlBanner(
+                    title = "Field check recommended",
+                    subtitle = "Scores above 50 trigger an automatic field inspection request.",
+                    tone = GlTone.Danger,
+                    icon = "warning",
+                )
+                GlSearchBar(
+                    value = uiState.highRiskSearch,
+                    onValueChange = viewModel::onHighRiskSearchChange,
+                    placeholder = "Search grower or NRC",
+                )
+            }
+            if (rows.isEmpty()) {
+                GlEmptyState(title = "No high-risk growers", subtitle = "Validations with a risk score ≥ 70 will appear here.", icon = "warning")
+            } else {
+                LazyColumn(
+                    modifier = Modifier.padding(horizontal = 20.dp),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(top = 12.dp, bottom = 20.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    items(rows, key = { it.validationLocalId }) { row ->
+                        GlCard(accent = GlAccent.Gold, contentPadding = 14.dp) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                                Column(
+                                    horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
+                                    modifier = Modifier
+                                        .padding(end = 4.dp),
+                                ) {
+                                    GlPill(text = "${row.riskScore}", tone = if (row.riskScore > 70) GlTone.Danger else GlTone.Gold, size = GlPillSize.Lg)
+                                }
+                                Column(Modifier.weight(1f)) {
+                                    GlFieldRow(label = "Grower", value = row.growerName)
+                                    GlFieldRow(label = "NRC", value = row.nrcNumber.ifBlank { "—" })
+                                    GlFieldRow(label = "Location", value = "${row.province.ifBlank { "—" }} / ${row.district.ifBlank { "—" }}")
+                                }
+                            }
                         }
                     }
                 }
@@ -425,6 +479,7 @@ fun FieldInspectionFormScreen(
     val scope = rememberCoroutineScope()
     val locationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
     val deviceId = remember { Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID).orEmpty() }
+    val c = glColors()
 
     val inspection by viewModel.observeInspection(inspectionId).collectAsState()
     LaunchedEffect(inspection, deviceId) {
@@ -454,80 +509,90 @@ fun FieldInspectionFormScreen(
         }
     }
 
-    Scaffold(topBar = { TbzTopBar("Field inspection") }) { padding ->
-        ScrollableFormColumn(Modifier.padding(padding)) {
-            FormSectionTitle(form.growerName.ifBlank { "Field inspection" })
-            FormTextField(
-                form.transplantedHectarage,
-                { viewModel.updateField { f -> f.copy(transplantedHectarage = it) } },
-                "Transplanted hectarage",
-                error = uiState.fieldErrors["transplantedHectarage"],
-            )
-            TbzDropdownField(
-                label = "Crop stage",
-                options = InspectionFormChoices.fieldCropStages,
-                selectedId = form.cropStage,
-                onSelected = { viewModel.updateField { f -> f.copy(cropStage = it) } },
-            )
-            TbzDropdownField(
-                label = "Plant population",
-                options = InspectionFormChoices.plantPopulations,
-                selectedId = form.plantPopulation,
-                onSelected = { viewModel.updateField { f -> f.copy(plantPopulation = it) } },
-            )
-            TbzDropdownField(
-                label = "Crop uniformity",
-                options = InspectionFormChoices.cropUniformities,
-                selectedId = form.cropUniformity,
-                onSelected = { viewModel.updateField { f -> f.copy(cropUniformity = it) } },
-            )
-            TbzDropdownField(
-                label = "Fertilizer application",
-                options = InspectionFormChoices.fertilizerApplications,
-                selectedId = form.fertilizerApplication,
-                onSelected = { viewModel.updateField { f -> f.copy(fertilizerApplication = it) } },
-            )
-            TbzDropdownField(
-                label = "Pest/disease status",
-                options = InspectionFormChoices.pestDiseaseStatuses,
-                selectedId = form.pestDiseaseStatus,
-                onSelected = { viewModel.updateField { f -> f.copy(pestDiseaseStatus = it) } },
-            )
-            TbzDropdownField(
-                label = "Weed control",
-                options = InspectionFormChoices.weedControls,
-                selectedId = form.weedControl,
-                onSelected = { viewModel.updateField { f -> f.copy(weedControl = it) } },
-            )
-            TbzDropdownField(
-                label = "Irrigation status",
-                options = InspectionFormChoices.irrigationStatuses,
-                selectedId = form.irrigationStatus,
-                onSelected = { viewModel.updateField { f -> f.copy(irrigationStatus = it) } },
-            )
-            FormTextField(form.gpsLatitude, { viewModel.updateField { f -> f.copy(gpsLatitude = it) } }, "GPS latitude")
-            FormTextField(form.gpsLongitude, { viewModel.updateField { f -> f.copy(gpsLongitude = it) } }, "GPS longitude")
-            OutlinedButton(
-                onClick = {
-                    permissionLauncher.launch(
-                        arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION),
-                    )
-                },
-                modifier = Modifier.fillMaxWidth(),
-            ) { Text("Capture GPS") }
-            FormTextField(
-                form.inspectorRemarks,
-                { viewModel.updateField { f -> f.copy(inspectorRemarks = it) } },
-                "Inspector remarks",
-                singleLine = false,
-                error = uiState.fieldErrors["inspectorRemarks"],
-            )
-            uiState.saveError?.let { ErrorText(it) }
-            FormActionRow(
-                primaryLabel = if (uiState.isSaving) "Saving…" else "Save inspection",
-                onPrimary = { viewModel.saveFieldReport(onSaved) },
-                primaryEnabled = !uiState.isSaving,
-            )
+    Scaffold(containerColor = c.bg) { padding ->
+        Column(Modifier.fillMaxSize().padding(padding)) {
+            GlScreenHeader(title = "Field inspection", subtitle = form.growerName.ifBlank { null })
+            ScrollableFormColumn {
+                GlSectionHeader(title = "Field measurements")
+                GlTextField(
+                    form.transplantedHectarage,
+                    { viewModel.updateField { f -> f.copy(transplantedHectarage = it) } },
+                    label = "Transplanted hectarage",
+                    error = uiState.fieldErrors["transplantedHectarage"],
+                )
+                GlDropdownField(
+                    label = "Crop stage",
+                    options = InspectionFormChoices.fieldCropStages,
+                    selectedId = form.cropStage,
+                    onSelected = { viewModel.updateField { f -> f.copy(cropStage = it) } },
+                )
+                GlDropdownField(
+                    label = "Plant population",
+                    options = InspectionFormChoices.plantPopulations,
+                    selectedId = form.plantPopulation,
+                    onSelected = { viewModel.updateField { f -> f.copy(plantPopulation = it) } },
+                )
+                GlDropdownField(
+                    label = "Crop uniformity",
+                    options = InspectionFormChoices.cropUniformities,
+                    selectedId = form.cropUniformity,
+                    onSelected = { viewModel.updateField { f -> f.copy(cropUniformity = it) } },
+                )
+                GlDropdownField(
+                    label = "Fertilizer application",
+                    options = InspectionFormChoices.fertilizerApplications,
+                    selectedId = form.fertilizerApplication,
+                    onSelected = { viewModel.updateField { f -> f.copy(fertilizerApplication = it) } },
+                )
+                GlDropdownField(
+                    label = "Pest/disease status",
+                    options = InspectionFormChoices.pestDiseaseStatuses,
+                    selectedId = form.pestDiseaseStatus,
+                    onSelected = { viewModel.updateField { f -> f.copy(pestDiseaseStatus = it) } },
+                )
+                GlDropdownField(
+                    label = "Weed control",
+                    options = InspectionFormChoices.weedControls,
+                    selectedId = form.weedControl,
+                    onSelected = { viewModel.updateField { f -> f.copy(weedControl = it) } },
+                )
+                GlDropdownField(
+                    label = "Irrigation status",
+                    options = InspectionFormChoices.irrigationStatuses,
+                    selectedId = form.irrigationStatus,
+                    onSelected = { viewModel.updateField { f -> f.copy(irrigationStatus = it) } },
+                )
+                GlSectionHeader(title = "Location")
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    GlTextField(form.gpsLatitude, { viewModel.updateField { f -> f.copy(gpsLatitude = it) } }, label = "GPS latitude", modifier = Modifier.weight(1f))
+                    GlTextField(form.gpsLongitude, { viewModel.updateField { f -> f.copy(gpsLongitude = it) } }, label = "GPS longitude", modifier = Modifier.weight(1f))
+                }
+                GlButton(
+                    text = "Capture GPS",
+                    onClick = {
+                        permissionLauncher.launch(
+                            arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION),
+                        )
+                    },
+                    variant = GlButtonVariant.Outline,
+                    leadingIcon = "gps",
+                )
+                GlSectionHeader(title = "Findings")
+                GlTextField(
+                    form.inspectorRemarks,
+                    { viewModel.updateField { f -> f.copy(inspectorRemarks = it) } },
+                    label = "Inspector remarks",
+                    singleLine = false,
+                    minLines = 3,
+                    error = uiState.fieldErrors["inspectorRemarks"],
+                )
+                uiState.saveError?.let { ErrorText(it) }
+                GlButton(
+                    text = if (uiState.isSaving) "Saving…" else "Save inspection",
+                    onClick = { viewModel.saveFieldReport(onSaved) },
+                    enabled = !uiState.isSaving,
+                )
+            }
         }
     }
 }
@@ -542,6 +607,7 @@ fun NurseryInspectionFormScreen(
     val form = uiState.nursery
     val context = LocalContext.current
     val deviceId = remember { Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID).orEmpty() }
+    val c = glColors()
 
     val inspection by viewModel.observeInspection(inspectionId).collectAsState()
     LaunchedEffect(inspection, deviceId) {
@@ -549,58 +615,59 @@ fun NurseryInspectionFormScreen(
         viewModel.updateNursery { it.copy(deviceId = deviceId, inspectionLocalId = inspectionId) }
     }
 
-    Scaffold(topBar = { TbzTopBar("Nursery inspection") }) { padding ->
-        ScrollableFormColumn(Modifier.padding(padding)) {
-            FormSectionTitle(form.growerName.ifBlank { "Nursery inspection" })
-            FormTextField(form.seedVariety, { viewModel.updateNursery { f -> f.copy(seedVariety = it) } }, "Seed variety", error = uiState.nurseryErrors["seedVariety"])
-            FormTextField(form.nurserySizeBeds, { viewModel.updateNursery { f -> f.copy(nurserySizeBeds = it) } }, "Nursery size / beds", error = uiState.nurseryErrors["nurserySizeBeds"])
-            FormTextField(form.dateOfSowing, { viewModel.updateNursery { f -> f.copy(dateOfSowing = it) } }, "Date of sowing (YYYY-MM-DD)", error = uiState.nurseryErrors["dateOfSowing"])
-            TbzDropdownField(
-                label = "Germination status",
-                options = InspectionFormChoices.germinationStatuses,
-                selectedId = form.germinationStatus,
-                onSelected = { viewModel.updateNursery { f -> f.copy(germinationStatus = it) } },
-            )
-            TbzDropdownField(
-                label = "Seedling condition",
-                options = InspectionFormChoices.seedlingConditions,
-                selectedId = form.seedlingCondition,
-                onSelected = { viewModel.updateNursery { f -> f.copy(seedlingCondition = it) } },
-            )
-            TbzDropdownField(
-                label = "Water source",
-                options = InspectionFormChoices.waterSources,
-                selectedId = form.waterSource,
-                onSelected = { viewModel.updateNursery { f -> f.copy(waterSource = it) } },
-            )
-            TbzRadioGroup(
-                label = "Pest/disease presence",
-                options = InspectionFormChoices.yesNo.map { it.first.toString() to it.second },
-                selected = form.pestDiseasePresent.toString(),
-                onSelected = { viewModel.updateNursery { f -> f.copy(pestDiseasePresent = it.toBoolean()) } },
-            )
-            FormTextField(form.pestDiseaseNotes, { viewModel.updateNursery { f -> f.copy(pestDiseaseNotes = it) } }, "Pest/disease notes", singleLine = false)
-            TbzRadioGroup(
-                label = "Fertilizer used",
-                options = InspectionFormChoices.yesNo.map { it.first.toString() to it.second },
-                selected = form.fertilizerUsed.toString(),
-                onSelected = { viewModel.updateNursery { f -> f.copy(fertilizerUsed = it.toBoolean()) } },
-            )
-            FormTextField(form.fertilizerNotes, { viewModel.updateNursery { f -> f.copy(fertilizerNotes = it) } }, "Fertilizer notes", singleLine = false)
-            TbzRadioGroup(
-                label = "Chemicals used",
-                options = InspectionFormChoices.yesNo.map { it.first.toString() to it.second },
-                selected = form.chemicalsUsed.toString(),
-                onSelected = { viewModel.updateNursery { f -> f.copy(chemicalsUsed = it.toBoolean()) } },
-            )
-            FormTextField(form.chemicalsNotes, { viewModel.updateNursery { f -> f.copy(chemicalsNotes = it) } }, "Chemicals notes", singleLine = false)
-            FormTextField(form.inspectorRemarks, { viewModel.updateNursery { f -> f.copy(inspectorRemarks = it) } }, "Inspector remarks", singleLine = false, error = uiState.nurseryErrors["inspectorRemarks"])
-            uiState.saveError?.let { ErrorText(it) }
-            FormActionRow(
-                primaryLabel = if (uiState.isSaving) "Saving…" else "Save inspection",
-                onPrimary = { viewModel.saveNurseryReport(onSaved) },
-                primaryEnabled = !uiState.isSaving,
-            )
+    Scaffold(containerColor = c.bg) { padding ->
+        Column(Modifier.fillMaxSize().padding(padding)) {
+            GlScreenHeader(title = "Nursery inspection", subtitle = form.growerName.ifBlank { null })
+            ScrollableFormColumn {
+                GlTextField(form.seedVariety, { viewModel.updateNursery { f -> f.copy(seedVariety = it) } }, label = "Seed variety", error = uiState.nurseryErrors["seedVariety"])
+                GlTextField(form.nurserySizeBeds, { viewModel.updateNursery { f -> f.copy(nurserySizeBeds = it) } }, label = "Nursery size / beds", error = uiState.nurseryErrors["nurserySizeBeds"])
+                GlTextField(form.dateOfSowing, { viewModel.updateNursery { f -> f.copy(dateOfSowing = it) } }, label = "Date of sowing", placeholder = "YYYY-MM-DD", leadingIcon = "calendar", error = uiState.nurseryErrors["dateOfSowing"])
+                GlDropdownField(
+                    label = "Germination status",
+                    options = InspectionFormChoices.germinationStatuses,
+                    selectedId = form.germinationStatus,
+                    onSelected = { viewModel.updateNursery { f -> f.copy(germinationStatus = it) } },
+                )
+                GlDropdownField(
+                    label = "Seedling condition",
+                    options = InspectionFormChoices.seedlingConditions,
+                    selectedId = form.seedlingCondition,
+                    onSelected = { viewModel.updateNursery { f -> f.copy(seedlingCondition = it) } },
+                )
+                GlDropdownField(
+                    label = "Water source",
+                    options = InspectionFormChoices.waterSources,
+                    selectedId = form.waterSource,
+                    onSelected = { viewModel.updateNursery { f -> f.copy(waterSource = it) } },
+                )
+                GlSectionHeader(title = "Crop protection")
+                LabeledToggleRow(
+                    label = "Pest/disease presence",
+                    checked = form.pestDiseasePresent,
+                    onCheckedChange = { viewModel.updateNursery { f -> f.copy(pestDiseasePresent = it) } },
+                )
+                GlTextField(form.pestDiseaseNotes, { viewModel.updateNursery { f -> f.copy(pestDiseaseNotes = it) } }, label = "Pest/disease notes", singleLine = false)
+                LabeledToggleRow(
+                    label = "Fertilizer used",
+                    checked = form.fertilizerUsed,
+                    onCheckedChange = { viewModel.updateNursery { f -> f.copy(fertilizerUsed = it) } },
+                )
+                GlTextField(form.fertilizerNotes, { viewModel.updateNursery { f -> f.copy(fertilizerNotes = it) } }, label = "Fertilizer notes", singleLine = false)
+                LabeledToggleRow(
+                    label = "Chemicals used",
+                    checked = form.chemicalsUsed,
+                    onCheckedChange = { viewModel.updateNursery { f -> f.copy(chemicalsUsed = it) } },
+                )
+                GlTextField(form.chemicalsNotes, { viewModel.updateNursery { f -> f.copy(chemicalsNotes = it) } }, label = "Chemicals notes", singleLine = false)
+                GlSectionHeader(title = "Findings")
+                GlTextField(form.inspectorRemarks, { viewModel.updateNursery { f -> f.copy(inspectorRemarks = it) } }, label = "Inspector remarks", singleLine = false, minLines = 3, error = uiState.nurseryErrors["inspectorRemarks"])
+                uiState.saveError?.let { ErrorText(it) }
+                GlButton(
+                    text = if (uiState.isSaving) "Saving…" else "Save inspection",
+                    onClick = { viewModel.saveNurseryReport(onSaved) },
+                    enabled = !uiState.isSaving,
+                )
+            }
         }
     }
 }
@@ -616,6 +683,7 @@ fun CuringInspectionFormScreen(
     val barnTypes by viewModel.barnTypes.collectAsState()
     val context = LocalContext.current
     val deviceId = remember { Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID).orEmpty() }
+    val c = glColors()
 
     val inspection by viewModel.observeInspection(inspectionId).collectAsState()
     LaunchedEffect(inspection, deviceId) {
@@ -629,48 +697,51 @@ fun CuringInspectionFormScreen(
         InspectionFormChoices.curingBarnTypes
     }
 
-    Scaffold(topBar = { TbzTopBar("Curing inspection") }) { padding ->
-        ScrollableFormColumn(Modifier.padding(padding)) {
-            FormSectionTitle(form.growerName.ifBlank { "Curing inspection" })
-            FormTextField(form.numberOfBarns, { viewModel.updateCuring { f -> f.copy(numberOfBarns = it) } }, "Number of barns", error = uiState.curingErrors["numberOfBarns"])
-            TbzDropdownField(
-                label = "Type of barns",
-                options = barnOptions,
-                selectedId = form.barnType,
-                onSelected = { viewModel.updateCuring { f -> f.copy(barnType = it) } },
-            )
-            FormTextField(form.curingCycles, { viewModel.updateCuring { f -> f.copy(curingCycles = it) } }, "Curing cycles", error = uiState.curingErrors["curingCycles"])
-            TbzDropdownField(
-                label = "Fuel source",
-                options = InspectionFormChoices.fuelSources,
-                selectedId = form.fuelSource,
-                onSelected = { viewModel.updateCuring { f -> f.copy(fuelSource = it) } },
-            )
-            TbzDropdownField(
-                label = "Curing status",
-                options = InspectionFormChoices.curingStatuses,
-                selectedId = form.curingStatus,
-                onSelected = { viewModel.updateCuring { f -> f.copy(curingStatus = it) } },
-            )
-            TbzDropdownField(
-                label = "Leaf quality",
-                options = InspectionFormChoices.leafQualities,
-                selectedId = form.leafQuality,
-                onSelected = { viewModel.updateCuring { f -> f.copy(leafQuality = it) } },
-            )
-            TbzDropdownField(
-                label = "Grading status",
-                options = InspectionFormChoices.gradingStatuses,
-                selectedId = form.gradingStatus,
-                onSelected = { viewModel.updateCuring { f -> f.copy(gradingStatus = it) } },
-            )
-            FormTextField(form.inspectorRemarks, { viewModel.updateCuring { f -> f.copy(inspectorRemarks = it) } }, "Inspector remarks", singleLine = false, error = uiState.curingErrors["inspectorRemarks"])
-            uiState.saveError?.let { ErrorText(it) }
-            FormActionRow(
-                primaryLabel = if (uiState.isSaving) "Saving…" else "Save inspection",
-                onPrimary = { viewModel.saveCuringReport(onSaved) },
-                primaryEnabled = !uiState.isSaving,
-            )
+    Scaffold(containerColor = c.bg) { padding ->
+        Column(Modifier.fillMaxSize().padding(padding)) {
+            GlScreenHeader(title = "Curing inspection", subtitle = form.growerName.ifBlank { null })
+            ScrollableFormColumn {
+                GlTextField(form.numberOfBarns, { viewModel.updateCuring { f -> f.copy(numberOfBarns = it) } }, label = "Number of barns", error = uiState.curingErrors["numberOfBarns"])
+                GlDropdownField(
+                    label = "Type of barns",
+                    options = barnOptions,
+                    selectedId = form.barnType,
+                    onSelected = { viewModel.updateCuring { f -> f.copy(barnType = it) } },
+                )
+                GlTextField(form.curingCycles, { viewModel.updateCuring { f -> f.copy(curingCycles = it) } }, label = "Curing cycles", error = uiState.curingErrors["curingCycles"])
+                GlDropdownField(
+                    label = "Fuel source",
+                    options = InspectionFormChoices.fuelSources,
+                    selectedId = form.fuelSource,
+                    onSelected = { viewModel.updateCuring { f -> f.copy(fuelSource = it) } },
+                )
+                GlDropdownField(
+                    label = "Curing status",
+                    options = InspectionFormChoices.curingStatuses,
+                    selectedId = form.curingStatus,
+                    onSelected = { viewModel.updateCuring { f -> f.copy(curingStatus = it) } },
+                )
+                GlDropdownField(
+                    label = "Leaf quality",
+                    options = InspectionFormChoices.leafQualities,
+                    selectedId = form.leafQuality,
+                    onSelected = { viewModel.updateCuring { f -> f.copy(leafQuality = it) } },
+                )
+                GlDropdownField(
+                    label = "Grading status",
+                    options = InspectionFormChoices.gradingStatuses,
+                    selectedId = form.gradingStatus,
+                    onSelected = { viewModel.updateCuring { f -> f.copy(gradingStatus = it) } },
+                )
+                GlSectionHeader(title = "Findings")
+                GlTextField(form.inspectorRemarks, { viewModel.updateCuring { f -> f.copy(inspectorRemarks = it) } }, label = "Inspector remarks", singleLine = false, minLines = 3, error = uiState.curingErrors["inspectorRemarks"])
+                uiState.saveError?.let { ErrorText(it) }
+                GlButton(
+                    text = if (uiState.isSaving) "Saving…" else "Save inspection",
+                    onClick = { viewModel.saveCuringReport(onSaved) },
+                    enabled = !uiState.isSaving,
+                )
+            }
         }
     }
 }
@@ -693,6 +764,7 @@ fun ValidationFormScreen(
     val scope = rememberCoroutineScope()
     val locationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
     val deviceId = remember { Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID).orEmpty() }
+    val c = glColors()
 
     val inspection by viewModel.observeInspection(inspectionId).collectAsState()
     LaunchedEffect(inspection, deviceId) {
@@ -733,112 +805,136 @@ fun ValidationFormScreen(
         InspectionFormChoices.validationBarnTypes
     }
 
-    Scaffold(topBar = { TbzTopBar("Grower validation") }) { padding ->
-        ScrollableFormColumn(Modifier.padding(padding)) {
-            OutlinedTextField(
-                value = form.growerName,
-                onValueChange = {},
-                readOnly = true,
-                label = { Text("Grower") },
-                modifier = Modifier.fillMaxWidth(),
-            )
-            OutlinedTextField(
-                value = form.growerNrc,
-                onValueChange = {},
-                readOnly = true,
-                label = { Text("NRC number") },
-                modifier = Modifier.fillMaxWidth(),
-            )
-            TbzDropdownField(
-                label = "Sex",
-                options = InspectionFormChoices.validationSexOptions,
-                selectedId = form.sex,
-                onSelected = { viewModel.updateValidation { f -> f.copy(sex = it) } },
-            )
-            FormTextField(form.gpsLatitude, { viewModel.updateValidation { f -> f.copy(gpsLatitude = it) } }, "GPS latitude", error = uiState.validationErrors["gpsLatitude"])
-            FormTextField(form.gpsLongitude, { viewModel.updateValidation { f -> f.copy(gpsLongitude = it) } }, "GPS longitude", error = uiState.validationErrors["gpsLongitude"])
-            OutlinedButton(
-                onClick = {
-                    permissionLauncher.launch(
-                        arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION),
-                    )
-                },
-                modifier = Modifier.fillMaxWidth(),
-            ) { Text("Capture GPS") }
-            TbzDropdownField(
-                label = "Crop stage",
-                options = InspectionFormChoices.validationCropStages,
-                selectedId = form.cropStage,
-                onSelected = { viewModel.updateValidation { f -> f.copy(cropStage = it) } },
-            )
-            TbzDropdownField(
-                label = "Tobacco type",
-                options = tobaccoOptions,
-                selectedId = form.tobaccoType,
-                onSelected = { viewModel.updateValidation { f -> f.copy(tobaccoType = it) } },
-            )
-            FormTextField(form.tobaccoVariety, { viewModel.updateValidation { f -> f.copy(tobaccoVariety = it) } }, "Tobacco variety", error = uiState.validationErrors["tobaccoVariety"])
-            FormTextField(form.validatedHectarage, viewModel::onValidatedHectarageChange, "Validated hectarage", error = uiState.validationErrors["validatedHectarage"])
-            FormTextField(form.yieldPerHa, { viewModel.updateValidation { f -> f.copy(yieldPerHa = it) } }, "Yield per ha (kg)", error = uiState.validationErrors["yieldPerHa"])
-            TbzDropdownField(
-                label = "Sponsor",
-                options = listOf("" to "Self-sponsored") + sponsors.map { it.id to it.name },
-                selectedId = form.sponsorId,
-                onSelected = { viewModel.updateValidation { f -> f.copy(sponsorId = it) } },
-            )
-            TbzDropdownField(
-                label = "Types of barns",
-                options = barnOptions,
-                selectedId = form.barnType,
-                onSelected = { viewModel.updateValidation { f -> f.copy(barnType = it) } },
-            )
-            FormTextField(form.numberOfBarns, { viewModel.updateValidation { f -> f.copy(numberOfBarns = it) } }, "Number of barns", error = uiState.validationErrors["numberOfBarns"])
-            TbzRadioGroup(
-                label = "Is barn capacity sufficient?",
-                options = InspectionFormChoices.barnCapacityOptions.map { it.first.toString() to it.second },
-                selected = form.barnCapacitySufficient.toString(),
-                onSelected = { viewModel.updateValidation { f -> f.copy(barnCapacitySufficient = it.toBoolean()) } },
-            )
-            FormSectionTitle("Stakeholders present (optional)")
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                listOf("TBZ", "ZTB", "GROWER").forEach { code ->
-                    FilterChip(
-                        selected = form.stakeholdersPresent.contains(code),
-                        onClick = { viewModel.toggleStakeholder(code) },
-                        label = { Text(code) },
-                    )
+    Scaffold(containerColor = c.bg) { padding ->
+        Column(Modifier.fillMaxSize().padding(padding)) {
+            GlScreenHeader(title = "Grower validation", subtitle = form.growerName.ifBlank { null })
+            ScrollableFormColumn {
+                GlCard(contentPadding = 14.dp) {
+                    Column {
+                        GlFieldRow(label = "Grower", value = form.growerName.ifBlank { "—" })
+                        GlFieldRow(label = "NRC number", value = form.growerNrc.ifBlank { "—" })
+                        GlFieldRow(label = "Device ID", value = form.deviceId.ifBlank { "—" }, mono = true)
+                    }
                 }
-            }
-            TbzDropdownField(
-                label = "Province",
-                options = provinces.map { it.id to it.name },
-                selectedId = form.provinceId,
-                onSelected = { viewModel.updateValidation { f -> f.copy(provinceId = it, districtId = "") } },
-            )
-            if (districts.isNotEmpty()) {
-                TbzDropdownField(
-                    label = "District",
-                    options = districts.map { it.id to it.name },
-                    selectedId = form.districtId,
-                    onSelected = { viewModel.updateValidation { f -> f.copy(districtId = it) } },
+                GlDropdownField(
+                    label = "Sex",
+                    options = InspectionFormChoices.validationSexOptions,
+                    selectedId = form.sex,
+                    onSelected = { viewModel.updateValidation { f -> f.copy(sex = it) } },
                 )
-            } else {
-                FormTextField(form.districtText, { viewModel.updateValidation { f -> f.copy(districtText = it) } }, "District", error = uiState.validationErrors["districtId"])
+                GlSectionHeader(title = "Location")
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    GlTextField(form.gpsLatitude, { viewModel.updateValidation { f -> f.copy(gpsLatitude = it) } }, label = "GPS latitude", modifier = Modifier.weight(1f), error = uiState.validationErrors["gpsLatitude"])
+                    GlTextField(form.gpsLongitude, { viewModel.updateValidation { f -> f.copy(gpsLongitude = it) } }, label = "GPS longitude", modifier = Modifier.weight(1f), error = uiState.validationErrors["gpsLongitude"])
+                }
+                GlButton(
+                    text = "Capture GPS",
+                    onClick = {
+                        permissionLauncher.launch(
+                            arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION),
+                        )
+                    },
+                    variant = GlButtonVariant.Outline,
+                    leadingIcon = "gps",
+                )
+                GlSectionHeader(title = "Crop & yield")
+                GlDropdownField(
+                    label = "Crop stage",
+                    options = InspectionFormChoices.validationCropStages,
+                    selectedId = form.cropStage,
+                    onSelected = { viewModel.updateValidation { f -> f.copy(cropStage = it) } },
+                )
+                GlDropdownField(
+                    label = "Tobacco type",
+                    options = tobaccoOptions,
+                    selectedId = form.tobaccoType,
+                    onSelected = { viewModel.updateValidation { f -> f.copy(tobaccoType = it) } },
+                )
+                GlTextField(form.tobaccoVariety, { viewModel.updateValidation { f -> f.copy(tobaccoVariety = it) } }, label = "Tobacco variety", error = uiState.validationErrors["tobaccoVariety"])
+                GlTextField(form.validatedHectarage, viewModel::onValidatedHectarageChange, label = "Validated hectarage", error = uiState.validationErrors["validatedHectarage"])
+                GlTextField(form.yieldPerHa, { viewModel.updateValidation { f -> f.copy(yieldPerHa = it) } }, label = "Yield per ha (kg)", error = uiState.validationErrors["yieldPerHa"])
+                GlDropdownField(
+                    label = "Sponsor",
+                    options = listOf("" to "Self-sponsored") + sponsors.map { it.id to it.name },
+                    selectedId = form.sponsorId,
+                    onSelected = { viewModel.updateValidation { f -> f.copy(sponsorId = it) } },
+                )
+                GlSectionHeader(title = "Curing capacity")
+                GlDropdownField(
+                    label = "Types of barns",
+                    options = barnOptions,
+                    selectedId = form.barnType,
+                    onSelected = { viewModel.updateValidation { f -> f.copy(barnType = it) } },
+                )
+                GlTextField(form.numberOfBarns, { viewModel.updateValidation { f -> f.copy(numberOfBarns = it) } }, label = "Number of barns", error = uiState.validationErrors["numberOfBarns"])
+                LabeledToggleRow(
+                    label = "Is barn capacity sufficient?",
+                    checked = form.barnCapacitySufficient,
+                    onCheckedChange = { viewModel.updateValidation { f -> f.copy(barnCapacitySufficient = it) } },
+                )
+                GlSectionHeader(title = "Stakeholders present (optional)")
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf("TBZ", "ZTB", "GROWER").forEach { code ->
+                        val active = form.stakeholdersPresent.contains(code)
+                        GlPill(
+                            text = code,
+                            tone = if (active) GlTone.Primary else GlTone.Default,
+                            modifier = Modifier.clickable { viewModel.toggleStakeholder(code) },
+                        )
+                    }
+                }
+                GlSectionHeader(title = "Location")
+                GlDropdownField(
+                    label = "Province",
+                    options = provinces.map { it.id to it.name },
+                    selectedId = form.provinceId,
+                    onSelected = { viewModel.updateValidation { f -> f.copy(provinceId = it, districtId = "") } },
+                )
+                if (districts.isNotEmpty()) {
+                    GlDropdownField(
+                        label = "District",
+                        options = districts.map { it.id to it.name },
+                        selectedId = form.districtId,
+                        onSelected = { viewModel.updateValidation { f -> f.copy(districtId = it) } },
+                    )
+                } else {
+                    GlTextField(form.districtText, { viewModel.updateValidation { f -> f.copy(districtText = it) } }, label = "District", error = uiState.validationErrors["districtId"])
+                }
+                GlSectionHeader(title = "Findings")
+                GlTextField(form.inspectorRemarks, { viewModel.updateValidation { f -> f.copy(inspectorRemarks = it) } }, label = "Remark by inspector", singleLine = false, minLines = 3)
+                uiState.saveError?.let { ErrorText(it) }
+                GlButton(
+                    text = if (uiState.isSaving) "Saving…" else "Submit validation",
+                    onClick = { viewModel.saveValidation(onSaved) },
+                    variant = GlButtonVariant.Gold,
+                    enabled = !uiState.isSaving,
+                )
             }
-            OutlinedTextField(
-                value = form.deviceId,
-                onValueChange = {},
-                readOnly = true,
-                label = { Text("Device ID") },
-                modifier = Modifier.fillMaxWidth(),
+        }
+    }
+}
+
+@Composable
+private fun LabeledToggleRow(
+    label: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    val c = glColors()
+    GlCard(contentPadding = 14.dp) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+        ) {
+            androidx.compose.material3.Text(
+                label,
+                color = c.text,
+                fontSize = 14.sp,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                modifier = Modifier.weight(1f),
             )
-            FormTextField(form.inspectorRemarks, { viewModel.updateValidation { f -> f.copy(inspectorRemarks = it) } }, "Remark by inspector", singleLine = false)
-            uiState.saveError?.let { ErrorText(it) }
-            FormActionRow(
-                primaryLabel = if (uiState.isSaving) "Saving…" else "Submit validation",
-                onPrimary = { viewModel.saveValidation(onSaved) },
-                primaryEnabled = !uiState.isSaving,
-            )
+            GlToggle(checked = checked, onCheckedChange = onCheckedChange)
         }
     }
 }
@@ -848,18 +944,26 @@ private fun InspectionScheduleRow(
     inspection: InspectionEntity,
     onClick: () -> Unit,
 ) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-    ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(inspection.grower_name ?: "Grower", fontWeight = FontWeight.SemiBold)
-            Text(inspectionTypeLabel(inspection.inspection_type))
-            Text("${inspection.province.orEmpty()} / ${inspection.district.orEmpty()}")
-            Text("Scheduled: ${inspection.scheduled_date}")
-            Text("Status: ${inspection.status}")
-            SyncStatusChip(inspection.sync_status)
+    val c = glColors()
+    GlCard(onClick = onClick, contentPadding = 14.dp) {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+            ) {
+                androidx.compose.material3.Text(
+                    inspection.grower_name ?: "Grower",
+                    color = c.text,
+                    fontSize = 14.sp,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                )
+                GlPill(text = inspectionTypeLabel(inspection.inspection_type), size = GlPillSize.Sm, tone = GlTone.Primary)
+            }
+            GlFieldRow(label = "Location", value = "${inspection.province.orEmpty().ifBlank { "—" }} / ${inspection.district.orEmpty().ifBlank { "—" }}")
+            GlFieldRow(label = "Scheduled", value = inspection.scheduled_date)
+            GlFieldRow(label = "Status", value = inspection.status)
+            GlSyncChip(status = inspection.sync_status)
             inspection.last_sync_error?.let { ErrorText(it) }
         }
     }
@@ -871,19 +975,16 @@ private fun InspectionReportRow(
     onDelete: () -> Unit,
 ) {
     val timestamp = rememberReportTimestamp(report.created_at)
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(report.type, fontWeight = FontWeight.SemiBold)
-            Text(timestamp)
-            SyncStatusChip(report.sync_status)
-            OutlinedButton(onClick = onDelete, modifier = Modifier.fillMaxWidth()) {
-                Text("Delete")
-            }
+    GlCard(contentPadding = 14.dp) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            GlFieldRow(label = "Type", value = inspectionTypeLabel(report.type))
+            GlFieldRow(label = "Created", value = timestamp)
+            GlSyncChip(status = report.sync_status)
+            GlButton(text = "Delete", onClick = onDelete, variant = GlButtonVariant.DangerOutline, size = GlButtonSize.Sm)
         }
     }
 }
 
-@Composable
 private fun rememberReportTimestamp(createdAt: Long): String {
     val formatter = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
     return formatter.format(Date(createdAt))
@@ -897,29 +998,40 @@ fun InspectionLookupScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val results by viewModel.growerSearchResults.collectAsState()
+    val c = glColors()
 
-    Scaffold(topBar = { TbzTopBar("Inspection lookup") }) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
-            OutlinedTextField(
-                value = uiState.searchQuery,
-                onValueChange = viewModel::onSearchChange,
-                label = { Text("Search grower name, TBZ ID, NRC") },
-                modifier = Modifier.fillMaxWidth(),
-            )
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(top = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                items(results, key = { it.local_id }) { grower ->
-                    Card(Modifier.fillMaxWidth().clickable { onOpenGrower(grower.local_id) }) {
-                        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text("${grower.first_name} ${grower.last_name}", fontWeight = FontWeight.SemiBold)
-                            grower.tbz_id?.let { Text("TBZ: $it") }
-                            Text("NRC: ${grower.nrc_number}")
-                            Text("${grower.province.orEmpty()} / ${grower.district.orEmpty()}")
-                            Text("Status: ${grower.status}")
-                            Button(onClick = { onScheduleForGrower(grower.local_id) }) {
-                                Text("Schedule inspection")
+    Scaffold(containerColor = c.bg) { padding ->
+        Column(Modifier.fillMaxSize().padding(padding)) {
+            GlScreenHeader(title = "Inspection lookup")
+            Column(Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
+                GlSearchBar(
+                    value = uiState.searchQuery,
+                    onValueChange = viewModel::onSearchChange,
+                    placeholder = "Search grower name, TBZ ID, NRC",
+                )
+            }
+            if (results.isEmpty()) {
+                GlEmptyState(title = "No growers found", subtitle = "Search by name, TBZ ID, or NRC.", icon = "search")
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 20.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    items(results, key = { it.local_id }) { grower ->
+                        GlCard(onClick = { onOpenGrower(grower.local_id) }, contentPadding = 14.dp) {
+                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                androidx.compose.material3.Text(
+                                    "${grower.first_name} ${grower.last_name}",
+                                    color = c.text,
+                                    fontSize = 14.sp,
+                                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                )
+                                grower.tbz_id?.let { GlFieldRow(label = "TBZ ID", value = it, mono = true) }
+                                GlFieldRow(label = "NRC", value = grower.nrc_number)
+                                GlFieldRow(label = "Location", value = "${grower.province.orEmpty().ifBlank { "—" }} / ${grower.district.orEmpty().ifBlank { "—" }}")
+                                GlFieldRow(label = "Status", value = grower.status)
+                                GlButton(text = "Schedule inspection", onClick = { onScheduleForGrower(grower.local_id) }, size = GlButtonSize.Sm, leadingIcon = "calendar")
                             }
                         }
                     }

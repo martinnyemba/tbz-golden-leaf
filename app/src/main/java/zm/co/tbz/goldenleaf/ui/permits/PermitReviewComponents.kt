@@ -5,18 +5,18 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import zm.co.tbz.goldenleaf.ui.components.ErrorText
-import zm.co.tbz.goldenleaf.ui.registration.FormSectionTitle
-import zm.co.tbz.goldenleaf.ui.registration.FormTextField
+import zm.co.tbz.goldenleaf.ui.components.GlBanner
+import zm.co.tbz.goldenleaf.ui.components.GlButton
+import zm.co.tbz.goldenleaf.ui.components.GlButtonVariant
+import zm.co.tbz.goldenleaf.ui.components.GlButtonSize
+import zm.co.tbz.goldenleaf.ui.components.GlCard
+import zm.co.tbz.goldenleaf.ui.components.GlSectionHeader
+import zm.co.tbz.goldenleaf.ui.components.GlTextField
+import zm.co.tbz.goldenleaf.ui.components.GlTone
 
 @Composable
 fun PermitReviewPanel(
@@ -25,57 +25,62 @@ fun PermitReviewPanel(
     onSubmit: () -> Unit,
 ) {
     val form = state.form
-    Card(Modifier.fillMaxWidth().padding(top = 12.dp)) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            FormSectionTitle("Review permit")
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+    GlCard(modifier = Modifier.fillMaxWidth().padding(top = 12.dp), contentPadding = 16.dp) {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            GlSectionHeader(title = "Review permit")
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(
                     PermitReviewActions.APPROVE to "Approve",
                     PermitReviewActions.REJECT to "Reject",
                     PermitReviewActions.RETURN to "Return",
                 ).forEach { (action, label) ->
-                    FilterChip(
-                        selected = form.action == action,
+                    GlButton(
+                        text = label,
                         onClick = { onFormChange(form.copy(action = action)) },
-                        label = { Text(label) },
+                        variant = if (form.action == action) GlButtonVariant.Secondary else GlButtonVariant.Outline,
+                        size = GlButtonSize.Sm,
+                        fillMaxWidth = false,
+                        modifier = Modifier.weight(1f),
                     )
                 }
             }
             if (form.action == PermitReviewActions.APPROVE) {
-                FormTextField(
-                    form.validFrom,
-                    { onFormChange(form.copy(validFrom = it)) },
-                    "Valid from (YYYY-MM-DD)",
+                GlTextField(
+                    value = form.validFrom,
+                    onValueChange = { onFormChange(form.copy(validFrom = it)) },
+                    label = "Valid from (YYYY-MM-DD)",
                     error = state.fieldErrors["validFrom"],
                 )
-                FormTextField(
-                    form.validTo,
-                    { onFormChange(form.copy(validTo = it)) },
-                    "Valid to (YYYY-MM-DD)",
+                GlTextField(
+                    value = form.validTo,
+                    onValueChange = { onFormChange(form.copy(validTo = it)) },
+                    label = "Valid to (YYYY-MM-DD)",
                     error = state.fieldErrors["validTo"],
                 )
             } else {
-                FormTextField(
-                    form.reason,
-                    { onFormChange(form.copy(reason = it)) },
-                    "Reason",
+                GlTextField(
+                    value = form.reason,
+                    onValueChange = { onFormChange(form.copy(reason = it)) },
+                    label = "Reason",
                     singleLine = false,
+                    minLines = 3,
                     error = state.fieldErrors["reason"],
                 )
             }
             state.submitError?.let { ErrorText(it) }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(
+                GlButton(
+                    text = if (state.isSubmitting) "Submitting…" else "Submit review",
                     onClick = onSubmit,
                     enabled = !state.isSubmitting,
                     modifier = Modifier.weight(1f),
-                ) {
-                    Text(if (state.isSubmitting) "Submitting…" else "Submit review")
-                }
-                OutlinedButton(
+                )
+                GlButton(
+                    text = "Reset",
                     onClick = { onFormChange(PermitReviewForm(action = form.action)) },
+                    variant = GlButtonVariant.Outline,
                     modifier = Modifier.weight(1f),
-                ) { Text("Reset") }
+                )
             }
         }
     }
@@ -84,6 +89,6 @@ fun PermitReviewPanel(
 @Composable
 fun PermitReviewSuccessBanner(show: Boolean) {
     if (show) {
-        Text("Review queued for sync", fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 8.dp))
+        GlBanner(title = "Review queued for sync", tone = GlTone.Success, icon = "cloud-up")
     }
 }
