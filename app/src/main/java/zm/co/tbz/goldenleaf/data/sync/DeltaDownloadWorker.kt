@@ -86,11 +86,11 @@ class DeltaDownloadWorker @AssistedInject constructor(
 
     private suspend fun pullTransportPermits() {
         val cursor = syncRepository.getCursor(ENTITY_PERMITS)
-        var updatedAfter = cursor?.updated_after
-        var pageAfter: String? = null
+        val updatedAfter = cursor?.updated_after
         val maxUpdated = cursor?.updated_after
-        do {
-            val page = api.getTransportPermits(updatedAfter = updatedAfter)
+        var pageNumber = 1
+        while (true) {
+            val page = api.getTransportPermits(updatedAfter = updatedAfter, page = pageNumber)
             val entities = page.results.map { dto ->
                 TransportPermitEntity(
                     local_id = dto.id,
@@ -121,9 +121,9 @@ class DeltaDownloadWorker @AssistedInject constructor(
                 )
             }
             permitRepository.upsertTransportPermits(entities)
-            pageAfter = page.next
-            updatedAfter = null
-        } while (pageAfter != null)
+            if (page.next == null) break
+            pageNumber++
+        }
         syncRepository.upsertCursor(
             SyncCursorEntity(
                 entity_type = ENTITY_PERMITS,
@@ -135,11 +135,11 @@ class DeltaDownloadWorker @AssistedInject constructor(
 
     private suspend fun pullGroupPermits() {
         val cursor = syncRepository.getCursor(ENTITY_GROUP_PERMITS)
-        var updatedAfter = cursor?.updated_after
-        var pageAfter: String? = null
+        val updatedAfter = cursor?.updated_after
         val maxUpdated = cursor?.updated_after
-        do {
-            val page = api.getGroupPermits(updatedAfter = updatedAfter)
+        var pageNumber = 1
+        while (true) {
+            val page = api.getGroupPermits(updatedAfter = updatedAfter, page = pageNumber)
             val entities = page.results.map { dto ->
                 GroupPermitEntity(
                     local_id = dto.id,
@@ -166,9 +166,9 @@ class DeltaDownloadWorker @AssistedInject constructor(
                 )
             }
             permitRepository.upsertGroupPermits(entities)
-            pageAfter = page.next
-            updatedAfter = null
-        } while (pageAfter != null)
+            if (page.next == null) break
+            pageNumber++
+        }
         syncRepository.upsertCursor(
             SyncCursorEntity(
                 entity_type = ENTITY_GROUP_PERMITS,
@@ -180,11 +180,11 @@ class DeltaDownloadWorker @AssistedInject constructor(
 
     private suspend fun pullInspections() {
         val cursor = syncRepository.getCursor(ENTITY_INSPECTIONS)
-        var updatedAfter = cursor?.updated_after
-        var pageAfter: String? = null
+        val updatedAfter = cursor?.updated_after
         val maxUpdated = cursor?.updated_after
-        do {
-            val page = api.getInspections(updatedAfter = updatedAfter)
+        var pageNumber = 1
+        while (true) {
+            val page = api.getInspections(updatedAfter = updatedAfter, page = pageNumber)
             val entities = page.results.map { dto ->
                 InspectionEntity(
                     local_id = dto.id,
@@ -200,9 +200,9 @@ class DeltaDownloadWorker @AssistedInject constructor(
                 )
             }
             inspectionRepository.upsertInspections(entities)
-            pageAfter = page.next
-            updatedAfter = null
-        } while (pageAfter != null)
+            if (page.next == null) break
+            pageNumber++
+        }
         syncRepository.upsertCursor(
             SyncCursorEntity(
                 entity_type = ENTITY_INSPECTIONS,

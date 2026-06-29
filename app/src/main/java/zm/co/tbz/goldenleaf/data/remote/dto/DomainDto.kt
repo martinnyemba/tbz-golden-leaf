@@ -44,9 +44,9 @@ data class GrowerDto(
 data class TransportPermitDto(
     val id: String,
     val permit_number: String? = null,
-    val status: String,
-    val total_bales: Int,
-    val total_weight_kg: Double,
+    val status: String = "",
+    val total_bales: Int = 0,
+    val total_weight_kg: Double = 0.0,
     val grower_name: String? = null,
     val license_plate: String? = null,
     val origin_province: String? = null,
@@ -68,12 +68,12 @@ data class TransportPermitDto(
 data class GroupPermitDto(
     val id: String,
     val group_permit_number: String? = null,
-    val license_plate: String,
+    val license_plate: String = "",
     val origin_province: String? = null,
     val origin_district: String? = null,
-    val destination_sales_floor: String,
+    val destination_sales_floor: String = "",
     val purpose: String? = null,
-    val status: String,
+    val status: String = "",
     val total_bales: Int = 0,
     val total_weight_kg: Double = 0.0,
     val valid_from: String? = null,
@@ -89,9 +89,9 @@ data class GroupPermitEntryDto(
     val id: String,
     val grower_name: String? = null,
     val grower_tbz_id: String? = null,
-    val total_bales: Int,
-    val total_weight_kg: Double,
-    val status: String,
+    val total_bales: Int = 0,
+    val total_weight_kg: Double = 0.0,
+    val status: String = "",
     val grower_category: String? = null,
 )
 
@@ -133,9 +133,9 @@ data class PermitApproveRequest(
 @Serializable
 data class InspectionDto(
     val id: String,
-    val inspection_type: String,
-    val status: String,
-    val scheduled_date: String,
+    val inspection_type: String = "",
+    val status: String = "",
+    val scheduled_date: String = "",
     val grower_name: String? = null
 )
 

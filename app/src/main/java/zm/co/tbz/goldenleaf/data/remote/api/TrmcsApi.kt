@@ -63,14 +63,16 @@ interface TrmcsApi {
     suspend fun getTransportPermits(
         @Query("search") search: String? = null,
         @Query("status") status: String? = null,
-        @Query("updated_after") updatedAfter: String? = null
+        @Query("updated_after") updatedAfter: String? = null,
+        @Query("page") page: Int? = null,
     ): PagedResponse<TransportPermitDto>
 
     @GET("permits/group-permits/")
     suspend fun getGroupPermits(
         @Query("search") search: String? = null,
         @Query("status") status: String? = null,
-        @Query("updated_after") updatedAfter: String? = null
+        @Query("updated_after") updatedAfter: String? = null,
+        @Query("page") page: Int? = null,
     ): PagedResponse<GroupPermitDto>
 
     @GET("inspectorate/inspections/")
@@ -78,7 +80,8 @@ interface TrmcsApi {
         @Query("search") search: String? = null,
         @Query("inspection_type") type: String? = null,
         @Query("status") status: String? = null,
-        @Query("updated_after") updatedAfter: String? = null
+        @Query("updated_after") updatedAfter: String? = null,
+        @Query("page") page: Int? = null,
     ): PagedResponse<InspectionDto>
 
     // --- Marketing ---
