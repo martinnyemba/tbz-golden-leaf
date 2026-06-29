@@ -244,28 +244,17 @@ class RegistrationViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Crop type, sponsor, hectarage and barn details are now collected directly
+     * into [CropDetailsForm] by the Farm step, so this only carries the GPS
+     * location captured on the personal/location step into the crop payload.
+     */
     fun syncCropFromWizardFields() {
         val personal = _uiState.value.personal
-        val types = tobaccoTypes.value
-        val barns = barnTypes.value
-        val tobaccoId = types.firstOrNull { it.name.equals(personal.tobaccoTypeName, ignoreCase = true) }?.id
-            ?: types.firstOrNull { personal.tobaccoTypeName.isBlank() }?.id
-            ?: types.firstOrNull()?.id.orEmpty()
-        val barnId = barns.firstOrNull {
-            it.name.contains(personal.curingStructure, ignoreCase = true) ||
-                personal.curingStructure.contains(it.name, ignoreCase = true)
-        }?.id ?: barns.firstOrNull()?.id.orEmpty()
-        val hectarage = personal.tobaccoAreaHa.ifBlank { personal.totalAreaHa }
         updateCrop { crop ->
             crop.copy(
-                tobaccoTypeId = tobaccoId,
-                hectarage = hectarage,
-                barnTypeId = barnId,
-                gpsLatitude = personal.gpsLatitude,
-                gpsLongitude = personal.gpsLongitude,
-                numberOfBarns = crop.numberOfBarns.ifBlank { "1" },
-                stringsPerBarn = crop.stringsPerBarn.ifBlank { "1" },
-                isSelfSponsored = crop.sponsorId.isNullOrBlank(),
+                gpsLatitude = crop.gpsLatitude.ifBlank { personal.gpsLatitude },
+                gpsLongitude = crop.gpsLongitude.ifBlank { personal.gpsLongitude },
             )
         }
     }

@@ -352,6 +352,7 @@ fun RegistrationStepFarmScreen(
     val provinces by viewModel.provinces.collectAsState()
     val tobaccoTypes by viewModel.tobaccoTypes.collectAsState()
     val barnTypes by viewModel.barnTypes.collectAsState()
+    val sponsors by viewModel.sponsors.collectAsState()
     val districts by viewModel.districtsForProvince(personal.provinceId).collectAsState(initial = emptyList())
     val c = glColors()
     val gpsLabel = if (personal.gpsLatitude.isNotBlank() && personal.gpsLongitude.isNotBlank()) {
@@ -407,14 +408,8 @@ fun RegistrationStepFarmScreen(
                         enabled = personal.provinceId.isNotBlank(),
                     )
                 }
-                GlTextField(
-                    value = personal.villageChief,
-                    onValueChange = { viewModel.updatePersonal { p -> p.copy(villageChief = it) } },
-                    label = "Village / chief",
-                    placeholder = "Village (Chief)",
-                )
                 GlCard(contentPadding = 0.dp) {
-                    GlImageSlot(label = "map · pinned 13.85°S 32.50°E", height = 120.dp, rounded = 0.dp)
+                    GlImageSlot(label = "map · GPS location", height = 120.dp, rounded = 0.dp)
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -440,45 +435,65 @@ fun RegistrationStepFarmScreen(
                         )
                     }
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    GlTextField(
-                        value = personal.totalAreaHa,
-                        onValueChange = { viewModel.updatePersonal { p -> p.copy(totalAreaHa = it) } },
-                        label = "Total area (ha)",
-                        modifier = Modifier.weight(1f),
-                    )
-                    GlTextField(
-                        value = personal.tobaccoAreaHa,
-                        onValueChange = { viewModel.updatePersonal { p -> p.copy(tobaccoAreaHa = it) } },
-                        label = "Tobacco area (ha)",
-                        modifier = Modifier.weight(1f),
-                    )
-                }
+
+                GlSectionHeader(title = "Crop allocation", modifier = Modifier.padding(top = 8.dp))
                 GlDropdownField(
-                    label = "Tobacco type",
-                    options = tobaccoTypes.map { it.id to it.name }.ifEmpty {
-                        GrowerFormChoices.tobaccoTypeOptions.map { it to it }
-                    },
-                    selectedId = tobaccoTypes.firstOrNull { it.name == personal.tobaccoTypeName }?.id
-                        ?: personal.tobaccoTypeName,
-                    onSelected = { id ->
-                        val name = tobaccoTypes.firstOrNull { it.id == id }?.name ?: id
-                        viewModel.updatePersonal { p -> p.copy(tobaccoTypeName = name) }
-                    },
+                    label = "Crop type",
+                    options = tobaccoTypes.map { it.id to it.name },
+                    selectedId = crop.tobaccoTypeId,
+                    onSelected = { id -> viewModel.updateCrop { it.copy(tobaccoTypeId = id) } },
                     required = true,
                     error = uiState.cropErrors["tobaccoTypeId"],
                 )
+                GlCard(contentPadding = 14.dp) {
+                    GlRow(
+                        title = "Self-sponsored",
+                        subtitle = "Grower funds their own crop (no sponsor)",
+                        leadingIcon = "check-circle",
+                        tone = GlTone.Primary,
+                        trailing = {
+                            GlToggle(
+                                checked = crop.isSelfSponsored,
+                                onCheckedChange = { checked ->
+                                    viewModel.updateCrop {
+                                        it.copy(isSelfSponsored = checked, sponsorId = if (checked) null else it.sponsorId)
+                                    }
+                                },
+                            )
+                        },
+                    )
+                }
+                if (!crop.isSelfSponsored) {
+                    GlDropdownField(
+                        label = "Sponsor",
+                        options = sponsors.map { it.id to it.name },
+                        selectedId = crop.sponsorId.orEmpty(),
+                        onSelected = { id -> viewModel.updateCrop { it.copy(sponsorId = id) } },
+                        required = true,
+                        error = uiState.cropErrors["sponsorId"],
+                    )
+                }
+                GlTextField(
+                    value = crop.hectarage,
+                    onValueChange = { value -> viewModel.updateCrop { it.copy(hectarage = value) } },
+                    label = "Hectarage",
+                    placeholder = "e.g. 4.5",
+                    required = true,
+                    error = uiState.cropErrors["hectarage"],
+                )
+                crop.hectarage.toDoubleOrNull()?.let {
+                    GlBanner(
+                        title = "Estimated yield: ${calculateYieldPerHa(it)} kg/ha",
+                        subtitle = "≤ 9 ha = 1500 kg/ha · > 9 ha = 3000 kg/ha",
+                        tone = GlTone.Info,
+                        icon = "info",
+                    )
+                }
                 GlDropdownField(
                     label = "Barn type",
-                    options = barnTypes.map { it.id to it.name }.ifEmpty {
-                        GrowerFormChoices.curingStructureOptions.map { it to it }
-                    },
-                    selectedId = barnTypes.firstOrNull { it.name == personal.curingStructure }?.id
-                        ?: personal.curingStructure,
-                    onSelected = { id ->
-                        val name = barnTypes.firstOrNull { it.id == id }?.name ?: id
-                        viewModel.updatePersonal { p -> p.copy(curingStructure = name) }
-                    },
+                    options = barnTypes.map { it.id to it.name },
+                    selectedId = crop.barnTypeId,
+                    onSelected = { id -> viewModel.updateCrop { it.copy(barnTypeId = id) } },
                     required = true,
                     error = uiState.cropErrors["barnTypeId"],
                 )
@@ -498,26 +513,6 @@ fun RegistrationStepFarmScreen(
                         error = uiState.cropErrors["stringsPerBarn"],
                     )
                 }
-                val hectarage = crop.hectarage.ifBlank { personal.tobaccoAreaHa.ifBlank { personal.totalAreaHa } }.toDoubleOrNull()
-                hectarage?.let {
-                    GlBanner(
-                        title = "Estimated yield: ${calculateYieldPerHa(it)} kg/ha",
-                        tone = GlTone.Info,
-                        icon = "info",
-                    )
-                }
-                GlTextField(
-                    value = personal.estimatedYieldKg,
-                    onValueChange = { viewModel.updatePersonal { p -> p.copy(estimatedYieldKg = it) } },
-                    label = "Estimated yield (kg)",
-                )
-                GlTextField(
-                    value = personal.farmNotes,
-                    onValueChange = { viewModel.updatePersonal { p -> p.copy(farmNotes = it) } },
-                    label = "Notes",
-                    placeholder = "Additional notes…",
-                    singleLine = false,
-                )
             }
             }
         }
@@ -544,14 +539,8 @@ fun RegistrationStepPhotosScreen(
         val target = photoTarget
         photoTarget = null
         if (uri == null || target == null) return@rememberLauncherForActivityResult
-        if (target == IdDocumentScanning.TARGET_PROFILE || target == "farm") {
-            val path = uri.toString()
-            viewModel.updatePersonal {
-                when (target) {
-                    IdDocumentScanning.TARGET_PROFILE -> it.copy(profilePhotoPath = path)
-                    else -> it.copy(farmOverviewPhotoPath = path)
-                }
-            }
+        if (target == IdDocumentScanning.TARGET_PROFILE) {
+            viewModel.updatePersonal { it.copy(profilePhotoPath = uri.toString()) }
             return@rememberLauncherForActivityResult
         }
         scanningTarget = target
@@ -569,9 +558,8 @@ fun RegistrationStepPhotosScreen(
     }
     val photoSlots = listOf(
         Triple("Profile photo", personal.profilePhotoPath != null, IdDocumentScanning.TARGET_PROFILE),
-        Triple("NRC · Front", personal.idFrontPath != null, IdDocumentScanning.TARGET_ID_FRONT),
-        Triple("NRC · Back", personal.idBackPath != null, IdDocumentScanning.TARGET_ID_BACK),
-        Triple("Farm overview", personal.farmOverviewPhotoPath != null, "farm"),
+        Triple("ID front", personal.idFrontPath != null, IdDocumentScanning.TARGET_ID_FRONT),
+        Triple("ID back", personal.idBackPath != null, IdDocumentScanning.TARGET_ID_BACK),
     )
 
     GlScaffold(
@@ -594,7 +582,7 @@ fun RegistrationStepPhotosScreen(
             Column(Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
                 GlBanner(
                     title = "3 photos required",
-                    subtitle = "Profile photo · NRC front · NRC back. Optional: farm overview.",
+                    subtitle = "Profile photo · ID front · ID back.",
                     tone = GlTone.Warning,
                     icon = "camera",
                 )
@@ -627,63 +615,6 @@ fun RegistrationStepPhotosScreen(
                 }
                 uiState.saveError?.let {
                     GlBanner(title = it, tone = GlTone.Danger, icon = "warning", modifier = Modifier.padding(top = 12.dp))
-                }
-                GlSectionHeader(title = "Signature", modifier = Modifier.padding(top = 16.dp))
-                GlCard(contentPadding = 14.dp) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(100.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(c.surfaceAlt),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        if (personal.signatureCaptured) {
-                            GlIcon("check", size = 32.dp, tint = c.primary)
-                        } else {
-                            Text("Tap to sign", color = c.textMuted, fontSize = 12.sp)
-                        }
-                        Row(
-                            modifier = Modifier
-                                .align(Alignment.BottomCenter)
-                                .fillMaxWidth()
-                                .padding(horizontal = 12.dp, vertical = 8.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                if (personal.signatureCaptured) "Captured 09:42" else "",
-                                color = c.textMuted,
-                                fontSize = 10.sp,
-                            )
-                            Text(
-                                if (personal.signatureCaptured) "Re-sign" else "Sign",
-                                color = c.primary,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.clickable {
-                                    viewModel.updatePersonal { it.copy(signatureCaptured = !it.signatureCaptured) }
-                                },
-                            )
-                        }
-                    }
-                }
-                GlSectionHeader(title = "Consent", modifier = Modifier.padding(top = 16.dp))
-                GlCard(contentPadding = 14.dp) {
-                    GlRow(
-                        title = "Grower has consented to data capture",
-                        subtitle = "Per TBZ Privacy Policy v3",
-                        leadingIcon = "check-circle",
-                        tone = GlTone.Primary,
-                        trailing = {
-                            GlToggle(
-                                checked = personal.consentGiven,
-                                onCheckedChange = { checked ->
-                                    viewModel.updatePersonal { it.copy(consentGiven = checked) }
-                                },
-                            )
-                        },
-                    )
                 }
             }
             }
