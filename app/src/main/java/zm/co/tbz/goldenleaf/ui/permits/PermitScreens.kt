@@ -1,14 +1,19 @@
 package zm.co.tbz.goldenleaf.ui.permits
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Checkbox
 import zm.co.tbz.goldenleaf.ui.components.GlScaffold
 import androidx.compose.material3.Text
@@ -17,6 +22,10 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -30,9 +39,12 @@ import zm.co.tbz.goldenleaf.ui.components.GlButtonSize
 import zm.co.tbz.goldenleaf.ui.components.GlButtonVariant
 import zm.co.tbz.goldenleaf.ui.components.GlCard
 import zm.co.tbz.goldenleaf.ui.components.GlDropdownField
+import zm.co.tbz.goldenleaf.ui.components.GlDivider
 import zm.co.tbz.goldenleaf.ui.components.GlEmptyState
+import zm.co.tbz.goldenleaf.ui.components.GlFab
 import zm.co.tbz.goldenleaf.ui.components.GlFieldRow
 import zm.co.tbz.goldenleaf.ui.components.GlFilterPills
+import zm.co.tbz.goldenleaf.ui.components.GlIcon
 import zm.co.tbz.goldenleaf.ui.components.GlKpiTile
 import zm.co.tbz.goldenleaf.ui.components.GlPill
 import zm.co.tbz.goldenleaf.ui.components.GlPillSize
@@ -46,6 +58,7 @@ import zm.co.tbz.goldenleaf.ui.components.GlTextField
 import zm.co.tbz.goldenleaf.ui.components.GlTone
 import zm.co.tbz.goldenleaf.ui.components.QrScanButton
 import zm.co.tbz.goldenleaf.ui.components.glColors
+import zm.co.tbz.goldenleaf.ui.components.glVerticalScroll
 import zm.co.tbz.goldenleaf.ui.registration.ScrollableFormColumn
 
 @Composable
@@ -179,23 +192,11 @@ fun PermitValidateScreen(
                     selectedId = state.salesfloorId,
                     onSelected = viewModel::updateValidateSalesfloor,
                 )
-                state.verifyError?.let { ErrorText(it) }
-                state.result?.let { result ->
-                    if (result.valid) {
-                        GlBanner(
-                            title = "Valid permit ${result.permitNumber.orEmpty()}",
-                            subtitle = "${result.growerName.orEmpty()} (${result.status.orEmpty()})",
-                            tone = GlTone.Success,
-                            icon = "check-circle",
-                        )
-                        GlCard(contentPadding = 14.dp) {
-                            Column {
-                                GlFieldRow(label = "TBZ ID", value = result.tbzId.orEmpty().ifBlank { "—" }, mono = true)
-                                GlFieldRow(label = "Total bales", value = "${result.totalBales ?: 0}")
-                                GlFieldRow(label = "Remaining", value = "${result.remainingBales ?: 0}")
-                            }
-                        }
-                    }
+                val result = state.result
+                if (result != null) {
+                    PermitValidationResult(result)
+                } else {
+                    state.verifyError?.let { ErrorText(it) }
                 }
                 GlButton(
                     text = if (state.isVerifying) "Verifying…" else "Verify",
@@ -211,64 +212,100 @@ fun PermitValidateScreen(
 fun PermitListScreen(
     onOpenDetail: (String) -> Unit,
     onValidate: () -> Unit = {},
+    onNew: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: PermitViewModel = hiltViewModel(),
 ) {
     val permits by viewModel.filteredPermits.collectAsState()
+    val allPermits by viewModel.transportPermits.collectAsState()
     val requests by viewModel.permitRequests.collectAsState()
     val uiState by viewModel.requestState.collectAsState()
     val c = glColors()
 
     GlScaffold(containerColor = c.bg, modifier = modifier) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding)) {
-            GlScreenHeader(
-                title = "Permits",
-                subtitle = "${permits.size} cached",
-                actions = {
-                    GlButton(
-                        text = "Scan",
-                        onClick = onValidate,
-                        variant = GlButtonVariant.Gold,
-                        size = GlButtonSize.Sm,
-                        fillMaxWidth = false,
-                        leadingIcon = "qr",
+        Box(Modifier.fillMaxSize().padding(padding)) {
+            Column(Modifier.fillMaxSize()) {
+                GlScreenHeader(
+                    title = "Permits",
+                    subtitle = "${allPermits.size} cached",
+                    actions = {
+                        GlButton(
+                            text = "Scan",
+                            onClick = onValidate,
+                            variant = GlButtonVariant.Gold,
+                            size = GlButtonSize.Sm,
+                            fillMaxWidth = false,
+                            leadingIcon = "qr",
+                        )
+                    },
+                )
+                Column(Modifier.padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    GlSearchBar(
+                        value = uiState.searchQuery,
+                        onValueChange = viewModel::onSearchChange,
+                        placeholder = "Search permit #, grower, plate",
                     )
-                },
-            )
-            Column(Modifier.padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                GlSearchBar(
-                    value = uiState.searchQuery,
-                    onValueChange = viewModel::onSearchChange,
-                    placeholder = "Search permit #, grower, plate",
-                )
-                GlFilterPills(
-                    options = PermitFormChoices.statusFilters.take(4),
-                    selected = uiState.statusFilter,
-                    onSelect = viewModel::onStatusFilterChange,
-                )
-                GlButton(text = "Sync pending requests", onClick = viewModel::syncAllPending, variant = GlButtonVariant.Outline, leadingIcon = "sync")
-            }
-            if (permits.isEmpty() && requests.isEmpty()) {
-                GlEmptyState(title = "No permits yet", subtitle = "Requested and cached permits will appear here.", icon = "permit")
-            } else {
-                LazyColumn(
-                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    if (requests.isNotEmpty()) {
-                        item { GlSectionHeader(title = "Local requests") }
-                        items(requests, key = { "req-${it.local_id}" }) { req ->
-                            PermitRequestRow(req, onClick = { onOpenDetail(req.local_id) })
-                        }
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        GlKpiTile("Active", allPermits.count { it.status == "APPROVED" }.toString(), Modifier.weight(1f), tone = GlTone.Primary)
+                        GlKpiTile("Pending", allPermits.count { it.status == "PENDING" }.toString(), Modifier.weight(1f), tone = GlTone.Gold)
+                        GlKpiTile("Bales", allPermits.sumOf { it.total_bales }.toString(), Modifier.weight(1f))
                     }
-                    item { GlSectionHeader(title = "Transport permits") }
-                    items(permits, key = { it.local_id }) { permit ->
-                        TransportPermitRow(permit, onClick = { onOpenDetail(permit.local_id) })
+                    GlFilterPills(
+                        options = PermitStatusFilterLabels.keys.toList(),
+                        selected = PermitStatusFilterLabels.entries.firstOrNull { it.value == uiState.statusFilter }?.key ?: "All",
+                        onSelect = { label -> viewModel.onStatusFilterChange(PermitStatusFilterLabels[label] ?: "All") },
+                    )
+                }
+                if (permits.isEmpty() && requests.isEmpty()) {
+                    GlEmptyState(title = "No permits yet", subtitle = "Requested and cached permits will appear here.", icon = "permit")
+                } else {
+                    LazyColumn(
+                        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 96.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        if (requests.isNotEmpty()) {
+                            item {
+                                GlSectionHeader(
+                                    title = "Local requests",
+                                    action = "Sync",
+                                    onAction = viewModel::syncAllPending,
+                                )
+                            }
+                            items(requests, key = { "req-${it.local_id}" }) { req ->
+                                PermitRequestRow(req, onClick = { onOpenDetail(req.local_id) })
+                            }
+                        }
+                        item { GlSectionHeader(title = "Transport permits") }
+                        items(permits, key = { it.local_id }) { permit ->
+                            TransportPermitRow(permit, onClick = { onOpenDetail(permit.local_id) })
+                        }
                     }
                 }
             }
+            GlFab(
+                onClick = onNew,
+                icon = "plus",
+                modifier = Modifier.align(Alignment.BottomEnd).padding(20.dp),
+            )
         }
     }
+}
+
+/** Friendly filter labels mapped to the real permit status values used by the API. */
+private val PermitStatusFilterLabels = linkedMapOf(
+    "All" to "All",
+    "Active" to "APPROVED",
+    "Pending" to "PENDING",
+    "Returned" to "RETURNED_FOR_CORRECTION",
+    "Rejected" to "REJECTED",
+)
+
+private fun prettyPermitStatus(status: String): String = when (status) {
+    "APPROVED" -> "Active"
+    "PENDING" -> "Pending"
+    "REJECTED" -> "Rejected"
+    "RETURNED_FOR_CORRECTION" -> "Returned"
+    else -> status.lowercase().replaceFirstChar { it.uppercase() }
 }
 
 @Composable
@@ -287,7 +324,7 @@ fun PermitDetailScreen(
         Column(Modifier.fillMaxSize().padding(padding)) {
             GlScreenHeader(title = "Permit detail")
             Column(
-                Modifier.fillMaxSize().padding(horizontal = 20.dp),
+                Modifier.fillMaxSize().glVerticalScroll().padding(horizontal = 20.dp).padding(bottom = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 when {
@@ -487,27 +524,81 @@ private fun BuyerStep(
 
 @Composable
 private fun TransportPermitRow(permit: TransportPermitEntity, onClick: () -> Unit) {
+    val c = glColors()
     val tone = when (permit.status) {
         "APPROVED" -> GlTone.Primary
         "PENDING" -> GlTone.Gold
         "REJECTED" -> GlTone.Danger
         else -> GlTone.Default
     }
-    GlCard(onClick = onClick, contentPadding = 14.dp) {
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    permit.permit_number ?: "Pending #",
-                    color = glColors().text,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                )
-                GlPill(text = permit.status, size = GlPillSize.Sm, tone = tone)
+    val tileBg = when (permit.status) {
+        "APPROVED" -> c.primarySoft
+        "PENDING" -> c.goldSoft
+        else -> c.surfaceAlt
+    }
+    val tileFg = when (permit.status) {
+        "APPROVED" -> c.primary
+        "PENDING" -> c.goldDeep
+        else -> c.textMuted
+    }
+    val validity = when {
+        permit.valid_from != null && permit.valid_to != null -> "Valid · ${permit.valid_from} → ${permit.valid_to}"
+        permit.status == "PENDING" -> "Pending approval"
+        permit.status == "REJECTED" -> permit.rejection_reason?.let { "Rejected · $it" } ?: "Rejected"
+        permit.status == "RETURNED_FOR_CORRECTION" -> "Returned for correction"
+        else -> prettyPermitStatus(permit.status)
+    }
+    GlCard(onClick = onClick, contentPadding = 0.dp) {
+        Column(Modifier.fillMaxWidth()) {
+            Row(
+                Modifier.fillMaxWidth().padding(14.dp),
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    Modifier.size(56.dp).clip(RoundedCornerShape(14.dp)).background(tileBg),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    GlIcon("permit", size = 26.dp, tint = tileFg)
+                }
+                Column(Modifier.weight(1f)) {
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Top,
+                    ) {
+                        Text(
+                            permit.permit_number ?: "Pending #",
+                            color = c.text,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontFamily = FontFamily.Monospace,
+                        )
+                        GlPill(text = prettyPermitStatus(permit.status), size = GlPillSize.Sm, tone = tone)
+                    }
+                    permit.grower_name?.let {
+                        Text(it, color = c.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 2.dp))
+                    }
+                    Text(
+                        "${permit.total_bales} bales · ${permit.total_weight_kg} kg · ${permit.purpose.lowercase().replaceFirstChar { ch -> ch.uppercase() }}",
+                        color = c.textMuted,
+                        fontSize = 11.sp,
+                        modifier = Modifier.padding(top = 2.dp),
+                    )
+                }
             }
-            permit.grower_name?.let { GlFieldRow(label = "Grower", value = it) }
-            GlFieldRow(label = "Bales · Weight", value = "${permit.total_bales} bales · ${permit.total_weight_kg} kg")
-            GlFieldRow(label = "Plate", value = "${permit.license_plate} · ${permit.purpose}")
-            GlSyncChip(status = permit.sync_status)
+            GlDivider()
+            Row(
+                Modifier.fillMaxWidth().background(c.surfaceAlt).padding(horizontal = 14.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    GlIcon("calendar", size = 12.dp, tint = c.textMuted)
+                    Text(validity, color = c.textMuted, fontSize = 11.sp)
+                }
+                GlIcon("chevron-right", size = 16.dp, tint = c.textSubtle)
+            }
         }
     }
 }
@@ -534,36 +625,17 @@ private fun PermitRequestRow(
 @Composable
 private fun TransportPermitDetail(permit: TransportPermitEntity) {
     val c = glColors()
-    val tone = when (permit.status) {
-        "APPROVED" -> GlTone.Primary
-        "PENDING" -> GlTone.Gold
-        "REJECTED" -> GlTone.Danger
-        else -> GlTone.Default
-    }
-    GlCard(accent = GlAccentFor(permit.status), contentPadding = 14.dp) {
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    permit.permit_number ?: "Transport permit",
-                    color = c.text,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                )
-                GlPill(text = permit.status, tone = tone)
+    PermitTicketCard(permit)
+    GlSectionHeader(title = "Movement")
+    PermitMovementCard(permit)
+    if (!permit.comments.isNullOrBlank() || permit.is_bought || permit.buyer_accepted) {
+        GlSectionHeader(title = "Buyer & notes")
+        GlCard(contentPadding = 14.dp) {
+            Column {
+                GlFieldRow(label = "Tobacco bought", value = if (permit.is_bought) "Yes" else "No")
+                GlFieldRow(label = "Buyer confirmed", value = if (permit.buyer_accepted) "Yes" else "No")
+                permit.comments?.takeIf { it.isNotBlank() }?.let { GlFieldRow(label = "Comments", value = it) }
             }
-            permit.grower_name?.let { GlFieldRow(label = "Grower", value = it) }
-        }
-    }
-    GlCard(contentPadding = 14.dp) {
-        Column {
-            GlFieldRow(label = "Bales · Weight", value = "${permit.total_bales} bales · ${permit.total_weight_kg} kg")
-            GlFieldRow(label = "Plate", value = permit.license_plate)
-            GlFieldRow(label = "From", value = "${permit.origin_province} / ${permit.origin_district}")
-            GlFieldRow(label = "To", value = permit.destination_sales_floor)
-            GlFieldRow(label = "Purpose", value = permit.purpose)
-            permit.valid_from?.let { GlFieldRow(label = "Valid from", value = it) }
-            permit.valid_to?.let { GlFieldRow(label = "Valid to", value = it) }
-            permit.comments?.let { GlFieldRow(label = "Comments", value = it) }
         }
     }
     permit.rejection_reason?.let {
@@ -573,10 +645,180 @@ private fun TransportPermitDetail(permit: TransportPermitEntity) {
     permit.last_sync_error?.let { ErrorText("Sync error: $it") }
 }
 
-private fun GlAccentFor(status: String) = when (status) {
-    "PENDING" -> zm.co.tbz.goldenleaf.ui.components.GlAccent.Gold
-    "APPROVED" -> zm.co.tbz.goldenleaf.ui.components.GlAccent.Primary
-    else -> zm.co.tbz.goldenleaf.ui.components.GlAccent.None
+/** Gradient transport-permit "ticket" card mirroring the design handoff. */
+@Composable
+private fun PermitTicketCard(permit: TransportPermitEntity) {
+    val c = glColors()
+    val validity = when {
+        permit.valid_from != null && permit.valid_to != null -> "${permit.valid_from} → ${permit.valid_to}"
+        else -> "Not yet set"
+    }
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(22.dp))
+            .background(Brush.linearGradient(listOf(c.primaryDeep, c.primary)))
+            .padding(20.dp),
+    ) {
+        Column {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
+                Column {
+                    Text(
+                        "TRANSPORT PERMIT",
+                        color = Color.White.copy(alpha = 0.7f),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        permit.permit_number ?: "Pending number",
+                        color = Color.White,
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontFamily = FontFamily.Monospace,
+                        modifier = Modifier.padding(top = 6.dp),
+                    )
+                }
+                GlPill(text = prettyPermitStatus(permit.status), tone = GlTone.Gold)
+            }
+            Row(
+                Modifier.fillMaxWidth().padding(top = 18.dp),
+                horizontalArrangement = Arrangement.spacedBy(18.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    Modifier.size(108.dp).clip(RoundedCornerShape(14.dp)).background(Color.White),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    GlIcon("qr", size = 72.dp, tint = c.primaryDeep)
+                }
+                Column(Modifier.weight(1f)) {
+                    Text("Grower", color = Color.White.copy(alpha = 0.7f), fontSize = 11.sp)
+                    Text(
+                        permit.grower_name ?: "—",
+                        color = Color.White,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                    )
+                    Row(
+                        Modifier.fillMaxWidth().padding(top = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    ) {
+                        TicketStat("Bales", permit.total_bales.toString())
+                        TicketStat("Weight", "${permit.total_weight_kg.toInt()} kg")
+                        TicketStat("Type", permit.purpose.lowercase().replaceFirstChar { it.uppercase() })
+                    }
+                }
+            }
+            Row(
+                Modifier.fillMaxWidth().padding(top = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text("Valid · ", color = Color.White.copy(alpha = 0.7f), fontSize = 11.sp)
+                Text(validity, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+@Composable
+private fun TicketStat(label: String, value: String) {
+    Column {
+        Text(
+            label.uppercase(),
+            color = Color.White.copy(alpha = 0.7f),
+            fontSize = 9.sp,
+            fontWeight = FontWeight.Bold,
+        )
+        Text(value, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
+    }
+}
+
+/** From → To movement card with vehicle / purpose details. */
+@Composable
+private fun PermitMovementCard(permit: TransportPermitEntity) {
+    val c = glColors()
+    GlCard(contentPadding = 14.dp) {
+        Column {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Box(
+                    Modifier.size(36.dp).clip(RoundedCornerShape(12.dp)).background(c.primarySoft),
+                    contentAlignment = Alignment.Center,
+                ) { GlIcon("map-pin", size = 18.dp, tint = c.primary) }
+                Column {
+                    Text("From", color = c.textMuted, fontSize = 12.sp)
+                    Text(
+                        "${permit.origin_district}, ${permit.origin_province}",
+                        color = c.text,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+            }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(top = 12.dp)) {
+                Box(
+                    Modifier.size(36.dp).clip(RoundedCornerShape(12.dp)).background(c.goldSoft),
+                    contentAlignment = Alignment.Center,
+                ) { GlIcon("building", size = 18.dp, tint = c.goldDeep) }
+                Column {
+                    Text("To", color = c.textMuted, fontSize = 12.sp)
+                    Text(
+                        permit.destination_sales_floor,
+                        color = c.text,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+            }
+            GlDivider(Modifier.padding(vertical = 14.dp))
+            GlFieldRow(label = "Vehicle", value = permit.license_plate)
+            GlFieldRow(label = "Purpose", value = permit.purpose.lowercase().replaceFirstChar { it.uppercase() })
+        }
+    }
+}
+
+/** Prominent valid / rejected result card for QR validation, mirroring the design handoff. */
+@Composable
+private fun PermitValidationResult(result: zm.co.tbz.goldenleaf.ui.marketing.VerifiedPermitInfo) {
+    val c = glColors()
+    val valid = result.valid
+    val accent = if (valid) c.success else c.danger
+    val soft = if (valid) c.successSoft else c.dangerSoft
+    GlCard(contentPadding = 20.dp) {
+        Column(
+            Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(soft, c.surface))),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Box(
+                Modifier.size(84.dp).clip(CircleShape).background(accent),
+                contentAlignment = Alignment.Center,
+            ) {
+                GlIcon(if (valid) "check" else "x", size = 48.dp, tint = Color.White)
+            }
+            Text(
+                if (valid) "Permit is valid" else "Permit rejected",
+                color = c.text,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.ExtraBold,
+                modifier = Modifier.padding(top = 14.dp),
+            )
+            Text(
+                if (valid) "Cleared for movement" else "Validation failed — see details below",
+                color = c.textMuted,
+                fontSize = 13.sp,
+                modifier = Modifier.padding(top = 6.dp),
+            )
+        }
+    }
+    GlCard(contentPadding = 14.dp) {
+        Column {
+            result.permitNumber?.takeIf { it.isNotBlank() }?.let { GlFieldRow(label = "Permit", value = it, mono = true) }
+            result.growerName?.takeIf { it.isNotBlank() }?.let { GlFieldRow(label = "Grower", value = it) }
+            result.tbzId?.takeIf { it.isNotBlank() }?.let { GlFieldRow(label = "TBZ ID", value = it, mono = true) }
+            GlFieldRow(label = "Bales", value = "${result.totalBales ?: 0}")
+            GlFieldRow(label = "Remaining", value = "${result.remainingBales ?: 0}")
+            result.status?.takeIf { it.isNotBlank() }?.let { GlFieldRow(label = "Status", value = prettyPermitStatus(it)) }
+        }
+    }
 }
 
 @Composable

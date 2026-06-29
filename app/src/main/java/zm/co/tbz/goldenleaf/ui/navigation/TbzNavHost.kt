@@ -461,7 +461,11 @@ fun TbzNavHost(
         }
         composable(Routes.PERMIT_VALIDATE) { PermitValidateScreen() }
         composable(Routes.PERMIT_LIST) {
-            PermitListScreen(onOpenDetail = { navController.navigate(Routes.permitDetail(it)) })
+            PermitListScreen(
+                onOpenDetail = { navController.navigate(Routes.permitDetail(it)) },
+                onValidate = { navController.navigate(Routes.PERMIT_VALIDATE) },
+                onNew = { navController.navigate(Routes.PERMIT_REQUEST) },
+            )
         }
         composable(
             route = Routes.PERMIT_DETAIL,
@@ -594,6 +598,7 @@ private fun MainShell(
                 modifier = contentModifier,
                 onOpenDetail = { navController.navigate(Routes.permitDetail(it)) },
                 onValidate = { navController.navigate(Routes.PERMIT_VALIDATE) },
+                onNew = { navController.navigate(Routes.PERMIT_REQUEST) },
             )
             GlTab.Inspection -> InspectionPortalListScreen(
                 modifier = contentModifier,
