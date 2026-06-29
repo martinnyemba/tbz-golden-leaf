@@ -491,7 +491,6 @@ fun GlDropdownField(
             androidx.compose.material3.DropdownMenu(
                 expanded = expanded,
                 onDismissRequest = { expanded = false },
-                modifier = Modifier.exposedDropdownSize(),
             ) {
                 options.forEach { (id, name) ->
                     androidx.compose.material3.DropdownMenuItem(
