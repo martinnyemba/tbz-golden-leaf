@@ -373,7 +373,7 @@ fun GrowerDetailScreen(
     onNewInspection: () -> Unit = {},
     viewModel: RegistrationViewModel = hiltViewModel(),
 ) {
-    val grower by viewModel.observeGrower(localId).collectAsState()
+    val grower by remember(localId) { viewModel.observeGrower(localId) }.collectAsState()
     val provinces by viewModel.provinces.collectAsState()
     var tab by remember { mutableStateOf("Overview") }
     val c = glColors()

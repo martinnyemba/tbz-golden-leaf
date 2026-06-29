@@ -6,6 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -236,7 +237,7 @@ fun TbzNavHost(
                 val vm = hiltViewModel<RegistrationViewModel>(navController.getBackStackEntry(Routes.REGISTRATION_WIZARD))
                 val lastId by vm.lastRegisteredId.collectAsState()
                 val uiState by vm.uiState.collectAsState()
-                val grower by vm.observeGrower(lastId.orEmpty()).collectAsState()
+                val grower by remember(lastId) { vm.observeGrower(lastId.orEmpty()) }.collectAsState()
                 RegistrationSuccessScreen(
                     growerName = uiState.lastRegisteredName ?: "Grower",
                     provisionalId = grower?.tbz_id ?: grower?.nrc_number ?: lastId?.take(12) ?: "Pending sync",

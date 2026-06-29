@@ -20,6 +20,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -314,8 +315,8 @@ fun PermitDetailScreen(
     onOpenCorrection: (String) -> Unit = {},
     viewModel: PermitViewModel = hiltViewModel(),
 ) {
-    val transport by viewModel.observeTransportPermit(localId).collectAsState()
-    val request by viewModel.observePermitRequest(localId).collectAsState()
+    val transport by remember(localId) { viewModel.observeTransportPermit(localId) }.collectAsState()
+    val request by remember(localId) { viewModel.observePermitRequest(localId) }.collectAsState()
     val canApprove by viewModel.canApprovePermit.collectAsState()
     val reviewState by viewModel.reviewState.collectAsState()
     val c = glColors()

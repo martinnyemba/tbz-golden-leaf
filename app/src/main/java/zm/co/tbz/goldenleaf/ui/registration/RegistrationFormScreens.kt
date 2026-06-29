@@ -368,7 +368,7 @@ fun GrowerEditScreen(
     onSaved: () -> Unit,
     viewModel: RegistrationViewModel = hiltViewModel(),
 ) {
-    val grower by viewModel.observeGrower(localId).collectAsState()
+    val grower by remember(localId) { viewModel.observeGrower(localId) }.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
     val provinces by viewModel.provinces.collectAsState()
     val personal = uiState.personal
@@ -417,7 +417,7 @@ fun GrowerCorrectionScreen(
     onDone: () -> Unit,
     viewModel: RegistrationViewModel = hiltViewModel(),
 ) {
-    val grower by viewModel.observeGrower(localId).collectAsState()
+    val grower by remember(localId) { viewModel.observeGrower(localId) }.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
     val personal = uiState.personal
     val c = glColors()

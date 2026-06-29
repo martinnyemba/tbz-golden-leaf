@@ -218,7 +218,6 @@ fun RegistrationStepIdentityScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val personal = uiState.personal
-    val fullName = listOf(personal.firstName, personal.lastName).filter { it.isNotBlank() }.joinToString(" ")
     val c = glColors()
 
     GlScaffold(
@@ -242,24 +241,33 @@ fun RegistrationStepIdentityScreen(
                     icon = "info",
                 )
                 GlTextField(
-                    value = fullName,
-                    onValueChange = { name ->
-                        val parts = name.trim().split(" ").filter { it.isNotBlank() }
-                        viewModel.updatePersonal {
-                            it.copy(
-                                firstName = parts.firstOrNull().orEmpty(),
-                                lastName = parts.drop(1).joinToString(" "),
-                            )
-                        }
-                    },
-                    label = "Full name",
-                    placeholder = "Mary Phiri",
+                    value = personal.firstName,
+                    onValueChange = { viewModel.updatePersonal { p -> p.copy(firstName = it) } },
+                    label = "First name",
+                    placeholder = "Mary",
                     required = true,
+                    error = uiState.personalErrors["firstName"],
                 )
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    GlTextField(
+                        value = personal.middleName,
+                        onValueChange = { viewModel.updatePersonal { p -> p.copy(middleName = it) } },
+                        label = "Middle name",
+                        modifier = Modifier.weight(1f),
+                    )
+                    GlTextField(
+                        value = personal.lastName,
+                        onValueChange = { viewModel.updatePersonal { p -> p.copy(lastName = it) } },
+                        label = "Last name",
+                        placeholder = "Phiri",
+                        required = true,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
                 GlTextField(
                     value = personal.nrcNumber,
                     onValueChange = { viewModel.updatePersonal { p -> p.copy(nrcNumber = it) } },
-                    label = "National Registration Card",
+                    label = "NRC / Passport / PACRA",
                     placeholder = "000000/00/0",
                     required = true,
                     leadingIcon = "badge",
@@ -275,8 +283,8 @@ fun RegistrationStepIdentityScreen(
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     GlDropdownField(
-                        label = "Gender",
-                        options = listOf("FEMALE" to "Female", "MALE" to "Male"),
+                        label = "Sex",
+                        options = GrowerFormChoices.sexOptions,
                         selectedId = personal.sex,
                         onSelected = { sex -> viewModel.updatePersonal { p -> p.copy(sex = sex) } },
                         modifier = Modifier.weight(1f),
@@ -286,29 +294,44 @@ fun RegistrationStepIdentityScreen(
                         value = personal.dateOfBirth,
                         onValueChange = { viewModel.updatePersonal { p -> p.copy(dateOfBirth = it) } },
                         label = "Date of birth",
-                        placeholder = "DD / MM / YYYY",
+                        placeholder = "YYYY-MM-DD",
                         leadingIcon = "calendar",
                         modifier = Modifier.weight(1f),
                     )
                 }
-                GlTextField(
-                    value = personal.localPhone,
-                    onValueChange = { viewModel.updatePersonal { p -> p.copy(localPhone = it) } },
-                    label = "Phone number",
-                    placeholder = "+260",
-                    leadingIcon = "phone",
-                )
-                GlTextField(
-                    value = personal.nextOfKin,
-                    onValueChange = { viewModel.updatePersonal { p -> p.copy(nextOfKin = it) } },
-                    label = "Next of kin",
-                    placeholder = "Name & relationship",
-                )
                 GlDropdownField(
-                    label = "Cooperative / association",
-                    options = GrowerFormChoices.cooperativeOptions.map { it to it },
-                    selectedId = personal.cooperative,
-                    onSelected = { viewModel.updatePersonal { p -> p.copy(cooperative = it) } },
+                    label = "Grower category",
+                    options = GrowerFormChoices.categories,
+                    selectedId = personal.category,
+                    onSelected = { cat -> viewModel.updatePersonal { p -> p.copy(category = cat) } },
+                    required = true,
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    GlDropdownField(
+                        label = "Country",
+                        options = GrowerFormChoices.phoneCountries,
+                        selectedId = personal.country,
+                        onSelected = { country -> viewModel.updatePersonal { p -> p.copy(country = country) } },
+                        modifier = Modifier.weight(1f),
+                        required = true,
+                    )
+                    GlTextField(
+                        value = personal.localPhone,
+                        onValueChange = { viewModel.updatePersonal { p -> p.copy(localPhone = it) } },
+                        label = "Local number",
+                        placeholder = "977000000",
+                        leadingIcon = "phone",
+                        modifier = Modifier.weight(1f),
+                        required = true,
+                        error = uiState.personalErrors["localPhone"],
+                    )
+                }
+                GlTextField(
+                    value = personal.email,
+                    onValueChange = { viewModel.updatePersonal { p -> p.copy(email = it) } },
+                    label = "Email address",
+                    placeholder = "name@example.com",
+                    leadingIcon = "mail",
                 )
             }
             }
