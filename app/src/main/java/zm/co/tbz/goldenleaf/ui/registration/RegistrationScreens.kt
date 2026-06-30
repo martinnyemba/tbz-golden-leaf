@@ -543,39 +543,66 @@ private fun GrowerDetailOverview(
     Column {
         grower.correction_reason?.let { reason ->
             GlCard(accent = GlAccent.Gold, contentPadding = 14.dp, modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp)) {
-                Text("Correction required", color = c.text, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                Text(reason, color = c.textMuted, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
+                Column {
+                    Text("Correction required", color = c.text, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    Text(reason, color = c.textMuted, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
+                }
             }
         }
         GlSectionHeader(title = "Identity", modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp))
         GlCard(contentPadding = 14.dp, modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)) {
-            GlFieldRow(label = "NRC", value = grower.nrc_number, mono = true)
-            GlDivider()
-            GlFieldRow(
-                label = "DOB / Gender",
-                value = listOfNotNull(grower.date_of_birth, grower.sex).joinToString(" · ").ifBlank { "—" },
-            )
-            GlDivider()
-            GlFieldRow(label = "Phone", value = grower.phone_number ?: "—")
-            GlDivider()
-            GlFieldRow(label = "Email", value = grower.email ?: "—")
-            GlDivider()
-            GlFieldRow(label = "Category", value = grower.category ?: "—")
+            Column {
+                GrowerDetailField(label = "NRC", value = grower.nrc_number, mono = true)
+                GlDivider()
+                GrowerDetailField(
+                    label = "Date of birth / Gender",
+                    value = listOfNotNull(grower.date_of_birth, grower.sex).joinToString(" · ").ifBlank { "—" },
+                )
+                GlDivider()
+                GrowerDetailField(label = "Phone", value = grower.phone_number ?: "—")
+                GlDivider()
+                GrowerDetailField(label = "Email", value = grower.email ?: "—")
+                GlDivider()
+                GrowerDetailField(label = "Category", value = grower.category ?: "—")
+            }
         }
         GlSectionHeader(title = "Location", modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp))
         GlCard(contentPadding = 14.dp, modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)) {
-            GlFieldRow(label = "Province · District", value = listOf(provinceName, grower.district).filter { !it.isNullOrBlank() }.joinToString(" · "))
-            GlDivider()
-            GlFieldRow(label = "Address", value = grower.address ?: "—")
-            GlDivider()
-            GlFieldRow(label = "Town / village", value = grower.town_village ?: "—")
-            GlDivider()
-            GlFieldRow(
-                label = "GPS",
-                value = listOfNotNull(grower.gps_latitude, grower.gps_longitude).joinToString(", ").ifBlank { "—" },
-                mono = true,
-            )
+            Column {
+                GrowerDetailField(label = "Province · District", value = listOf(provinceName, grower.district).filter { !it.isNullOrBlank() }.joinToString(" · ").ifBlank { "—" })
+                GlDivider()
+                GrowerDetailField(label = "Address", value = grower.address ?: "—")
+                GlDivider()
+                GrowerDetailField(label = "Town / village", value = grower.town_village ?: "—")
+                GlDivider()
+                GrowerDetailField(
+                    label = "GPS",
+                    value = listOfNotNull(grower.gps_latitude, grower.gps_longitude).joinToString(", ").ifBlank { "—" },
+                    mono = true,
+                )
+            }
         }
+    }
+}
+
+/**
+ * Stacked label-over-value row for the grower profile. Long values (email,
+ * address) wrap full-width instead of being crammed beside the label, which is
+ * where the side-by-side field row overlapped.
+ */
+@Composable
+private fun GrowerDetailField(label: String, value: String, mono: Boolean = false) {
+    val c = glColors()
+    Column(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+        Text(label, color = c.textMuted, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+        Text(
+            value,
+            color = c.text,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.SemiBold,
+            fontFamily = if (mono) FontFamily.Monospace else FontFamily.Default,
+            modifier = Modifier.padding(top = 2.dp),
+        )
     }
 }
 

@@ -543,7 +543,7 @@ fun GlCard(
                     .background(if (accent == GlAccent.Gold) c.gold else c.primary),
             )
         }
-        Box(modifier = Modifier.weight(1f).padding(contentPadding)) { content() }
+        Column(modifier = Modifier.weight(1f).padding(contentPadding)) { content() }
     }
 }
 

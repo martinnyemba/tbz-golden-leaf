@@ -65,7 +65,8 @@ class RegistrationViewModel @Inject constructor(
     val uiState: StateFlow<RegistrationUiState> = _uiState.asStateFlow()
 
     init {
-        syncCoordinator.scheduleReferenceRefresh()
+        // The delta download worker also refreshes reference data; the direct
+        // throttled call below loads the dropdowns promptly without a worker.
         syncCoordinator.scheduleDeltaDownload()
         viewModelScope.launch { runCatching { referenceRepository.refreshReference() } }
         refreshGrowers()

@@ -1,6 +1,8 @@
 package zm.co.tbz.goldenleaf.data.repository
 
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import zm.co.tbz.goldenleaf.data.local.dao.ReferenceDao
 import zm.co.tbz.goldenleaf.data.local.entity.*
 import zm.co.tbz.goldenleaf.data.local.preferences.UserPreferences
@@ -14,6 +16,8 @@ class ReferenceRepository @Inject constructor(
     private val api: TrmcsApi,
     private val userPreferences: UserPreferences,
 ) {
+    private val refreshMutex = Mutex()
+    @Volatile private var lastRefreshSuccessAt = 0L
     fun observeProvinces(): Flow<List<ProvinceEntity>> = referenceDao.observeProvinces()
     suspend fun upsertProvinces(provinces: List<ProvinceEntity>) = referenceDao.upsertProvinces(provinces)
 
@@ -38,19 +42,32 @@ class ReferenceRepository @Inject constructor(
     /**
      * Fetches the full reference bundle (provinces, districts, sponsors, sales
      * floors, buyers, tobacco/crop types, barn types) and caches it locally.
+     *
+     * Serialized with a mutex and throttled so the several screens that ask for
+     * a refresh on open don't fan out into a burst of identical requests (which
+     * a single-threaded dev server drops as "connection closed"). Pass
+     * [force] = true for explicit/background sync to bypass the throttle.
+     *
      * Throws on failure so callers can surface the real error; the 401 path is
-     * handled by the OkHttp token authenticator so an expired session is
-     * refreshed and the call retried transparently.
+     * handled by the OkHttp token authenticator.
      */
-    suspend fun refreshReference() {
-        val bundle = api.reference()
-        upsertProvinces(bundle.provinces.map { ProvinceEntity(it.id, it.name, it.code) })
-        upsertDistricts(bundle.districts.map { DistrictEntity(it.id, it.name, it.province_id) })
-        upsertSponsors(bundle.sponsors.map { SponsorEntity(it.id, it.name) })
-        upsertSalesFloors(bundle.salesfloors.map { SalesFloorEntity(it.id, it.name, it.location) })
-        upsertBuyers(bundle.buyers.map { BuyerEntity(it.id, it.name) })
-        upsertTobaccoTypes(bundle.tobacco_types.map { TobaccoTypeEntity(it.id, it.name, it.code) })
-        upsertBarnTypes(bundle.barn_types.map { BarnTypeEntity(it.id, it.name) })
-        userPreferences.setReferenceVersion(bundle.version)
+    suspend fun refreshReference(force: Boolean = false) {
+        refreshMutex.withLock {
+            if (!force && System.currentTimeMillis() - lastRefreshSuccessAt < THROTTLE_MS) return
+            val bundle = api.reference()
+            upsertProvinces(bundle.provinces.map { ProvinceEntity(it.id, it.name, it.code) })
+            upsertDistricts(bundle.districts.map { DistrictEntity(it.id, it.name, it.province_id) })
+            upsertSponsors(bundle.sponsors.map { SponsorEntity(it.id, it.name) })
+            upsertSalesFloors(bundle.salesfloors.map { SalesFloorEntity(it.id, it.name, it.location) })
+            upsertBuyers(bundle.buyers.map { BuyerEntity(it.id, it.name) })
+            upsertTobaccoTypes(bundle.tobacco_types.map { TobaccoTypeEntity(it.id, it.name, it.code) })
+            upsertBarnTypes(bundle.barn_types.map { BarnTypeEntity(it.id, it.name) })
+            userPreferences.setReferenceVersion(bundle.version)
+            lastRefreshSuccessAt = System.currentTimeMillis()
+        }
+    }
+
+    private companion object {
+        const val THROTTLE_MS = 30_000L
     }
 }

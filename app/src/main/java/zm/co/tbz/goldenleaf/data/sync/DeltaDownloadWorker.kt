@@ -53,7 +53,7 @@ class DeltaDownloadWorker @AssistedInject constructor(
                 .onFailure { errors += "$name: ${it.message ?: it.javaClass.simpleName}" }
         }
 
-        section("reference") { referenceRepository.refreshReference() }
+        section("reference") { referenceRepository.refreshReference(force = true) }
         section("growers") { pullGrowers() }
         section("transport permits") { pullTransportPermits() }
         section("group permits") { pullGroupPermits() }
