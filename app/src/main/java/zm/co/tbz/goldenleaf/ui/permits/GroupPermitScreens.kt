@@ -417,7 +417,7 @@ fun GroupPermitDetailScreen(
                     if (permit!!.status == "PENDING" && canApprove) {
                         PermitReviewPanel(
                             state = reviewState,
-                            onFormChange = { viewModel.updateReviewForm { it } },
+                            onFormChange = { updated -> viewModel.updateReviewForm { updated } },
                             onSubmit = {
                                 val remoteId = permit!!.remote_id ?: permit!!.local_id
                                 viewModel.submitGroupPermitReview(localId, remoteId)

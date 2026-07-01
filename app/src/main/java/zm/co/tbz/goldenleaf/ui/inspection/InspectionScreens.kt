@@ -54,6 +54,7 @@ import zm.co.tbz.goldenleaf.ui.components.GlScreenHeader
 import zm.co.tbz.goldenleaf.ui.components.GlSearchBar
 import zm.co.tbz.goldenleaf.ui.components.GlSectionHeader
 import zm.co.tbz.goldenleaf.ui.components.GlSyncChip
+import zm.co.tbz.goldenleaf.ui.components.GlDateField
 import zm.co.tbz.goldenleaf.ui.components.GlTextField
 import zm.co.tbz.goldenleaf.ui.components.GlToggle
 import zm.co.tbz.goldenleaf.ui.components.GlTone
@@ -174,12 +175,11 @@ fun ScheduleInspectionScreen(
                     onSelected = { viewModel.updateSchedule { s -> s.copy(inspectionType = it) } },
                 )
 
-                GlTextField(
+                GlDateField(
                     value = schedule.scheduledDate,
                     onValueChange = { viewModel.updateSchedule { s -> s.copy(scheduledDate = it) } },
                     label = "Scheduled date",
-                    placeholder = "YYYY-MM-DD",
-                    leadingIcon = "calendar",
+                    required = true,
                     error = uiState.scheduleErrors["scheduledDate"],
                 )
 

@@ -49,7 +49,9 @@ import zm.co.tbz.goldenleaf.ui.components.GlScreenHeader
 import zm.co.tbz.goldenleaf.ui.components.GlSectionHeader
 import zm.co.tbz.goldenleaf.ui.components.GlStepper
 import zm.co.tbz.goldenleaf.ui.components.GlSyncChip
+import zm.co.tbz.goldenleaf.ui.components.GlDateField
 import zm.co.tbz.goldenleaf.ui.components.GlTextField
+import zm.co.tbz.goldenleaf.ui.components.todayUtcMillis
 import zm.co.tbz.goldenleaf.ui.components.GlTone
 import zm.co.tbz.goldenleaf.ui.components.QrScanButton
 import zm.co.tbz.goldenleaf.ui.components.glColors
@@ -409,10 +411,11 @@ private fun BatchInfoStep(
             selectedId = batch.buyerId,
             onSelected = { onBatchChange(batch.copy(buyerId = it)) },
         )
-        GlTextField(
+        GlDateField(
             value = batch.saleDate,
             onValueChange = { onBatchChange(batch.copy(saleDate = it)) },
-            label = "Sale date (YYYY-MM-DD)",
+            label = "Sale date",
+            maxDateMillis = todayUtcMillis(),
         )
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             GlButton(

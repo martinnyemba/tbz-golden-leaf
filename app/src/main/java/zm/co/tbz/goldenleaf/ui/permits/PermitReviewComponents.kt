@@ -15,7 +15,10 @@ import zm.co.tbz.goldenleaf.ui.components.GlButtonVariant
 import zm.co.tbz.goldenleaf.ui.components.GlButtonSize
 import zm.co.tbz.goldenleaf.ui.components.GlCard
 import zm.co.tbz.goldenleaf.ui.components.GlSectionHeader
+import zm.co.tbz.goldenleaf.ui.components.GlDateField
 import zm.co.tbz.goldenleaf.ui.components.GlTextField
+import zm.co.tbz.goldenleaf.ui.components.isoDateToUtcMillis
+import zm.co.tbz.goldenleaf.ui.components.todayUtcMillis
 import zm.co.tbz.goldenleaf.ui.components.GlTone
 
 @Composable
@@ -45,16 +48,21 @@ fun PermitReviewPanel(
                 }
             }
             if (form.action == PermitReviewActions.APPROVE) {
-                GlTextField(
+                GlDateField(
                     value = form.validFrom,
                     onValueChange = { onFormChange(form.copy(validFrom = it)) },
-                    label = "Valid from (YYYY-MM-DD)",
+                    label = "Valid from",
+                    required = true,
+                    minDateMillis = todayUtcMillis(),
                     error = state.fieldErrors["validFrom"],
                 )
-                GlTextField(
+                GlDateField(
                     value = form.validTo,
                     onValueChange = { onFormChange(form.copy(validTo = it)) },
-                    label = "Valid to (YYYY-MM-DD)",
+                    label = "Valid to",
+                    required = true,
+                    // Can't expire before it starts (falls back to today if 'from' unset).
+                    minDateMillis = isoDateToUtcMillis(form.validFrom) ?: todayUtcMillis(),
                     error = state.fieldErrors["validTo"],
                 )
             } else {

@@ -61,7 +61,9 @@ import zm.co.tbz.goldenleaf.ui.components.GlRow
 import zm.co.tbz.goldenleaf.ui.components.GlScreenHeader
 import zm.co.tbz.goldenleaf.ui.components.GlSectionHeader
 import zm.co.tbz.goldenleaf.ui.components.GlStepper
+import zm.co.tbz.goldenleaf.ui.components.GlDateField
 import zm.co.tbz.goldenleaf.ui.components.GlTextField
+import zm.co.tbz.goldenleaf.ui.components.todayUtcMillis
 import zm.co.tbz.goldenleaf.ui.components.GlToggle
 import zm.co.tbz.goldenleaf.ui.components.GlTone
 import zm.co.tbz.goldenleaf.ui.components.glColors
@@ -290,12 +292,11 @@ fun RegistrationStepIdentityScreen(
                         modifier = Modifier.weight(1f),
                         required = true,
                     )
-                    GlTextField(
+                    GlDateField(
                         value = personal.dateOfBirth,
                         onValueChange = { viewModel.updatePersonal { p -> p.copy(dateOfBirth = it) } },
                         label = "Date of birth",
-                        placeholder = "YYYY-MM-DD",
-                        leadingIcon = "calendar",
+                        maxDateMillis = todayUtcMillis(),
                         modifier = Modifier.weight(1f),
                     )
                 }

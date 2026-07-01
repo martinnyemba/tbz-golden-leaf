@@ -337,7 +337,7 @@ fun PermitDetailScreen(
                         if (transport!!.status == "PENDING" && canApprove) {
                             PermitReviewPanel(
                                 state = reviewState,
-                                onFormChange = { viewModel.updateReviewForm { it } },
+                                onFormChange = { updated -> viewModel.updateReviewForm { updated } },
                                 onSubmit = {
                                     val remoteId = transport!!.remote_id ?: transport!!.local_id
                                     viewModel.submitTransportPermitReview(localId, remoteId)

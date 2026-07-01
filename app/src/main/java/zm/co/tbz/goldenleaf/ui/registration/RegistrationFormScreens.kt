@@ -62,7 +62,9 @@ import zm.co.tbz.goldenleaf.ui.components.GlIcon
 import zm.co.tbz.goldenleaf.ui.components.GlScreenHeader
 import zm.co.tbz.goldenleaf.ui.components.GlSectionHeader
 import zm.co.tbz.goldenleaf.ui.components.GlStepper
+import zm.co.tbz.goldenleaf.ui.components.GlDateField
 import zm.co.tbz.goldenleaf.ui.components.GlTextField
+import zm.co.tbz.goldenleaf.ui.components.todayUtcMillis
 import zm.co.tbz.goldenleaf.ui.components.GlTone
 import zm.co.tbz.goldenleaf.ui.components.NrcScanButton
 import zm.co.tbz.goldenleaf.ui.components.glColors
@@ -197,7 +199,7 @@ private fun PersonalDetailsStep(
             modifier = Modifier.fillMaxWidth(),
         )
         GlDropdownField("Sex", GrowerFormChoices.sexOptions, personal.sex, { onPersonalChange(personal.copy(sex = it)) })
-        GlTextField(personal.dateOfBirth, { onPersonalChange(personal.copy(dateOfBirth = it)) }, label = "Date of birth (YYYY-MM-DD)", placeholder = "YYYY-MM-DD")
+        GlDateField(personal.dateOfBirth, { onPersonalChange(personal.copy(dateOfBirth = it)) }, label = "Date of birth", maxDateMillis = todayUtcMillis())
         GlDropdownField("Category", GrowerFormChoices.categories, personal.category, { onPersonalChange(personal.copy(category = it)) })
         GlDropdownField("Country", GrowerFormChoices.phoneCountries, personal.country, { onPersonalChange(personal.copy(country = it)) })
         GlTextField(personal.localPhone, { onPersonalChange(personal.copy(localPhone = it)) }, label = "Local phone number", leadingIcon = "mail", required = true, error = errors["localPhone"])
@@ -388,7 +390,7 @@ fun GrowerEditScreen(
                 GlTextField(personal.lastName, { v -> viewModel.updatePersonal { it.copy(lastName = v) } }, label = "Last name", required = true)
                 GlTextField(personal.nrcNumber, { v -> viewModel.updatePersonal { it.copy(nrcNumber = v) } }, label = "NRC / PACRA", required = true)
                 GlDropdownField("Sex", GrowerFormChoices.sexOptions, personal.sex, { v -> viewModel.updatePersonal { it.copy(sex = v) } })
-                GlTextField(personal.dateOfBirth, { v -> viewModel.updatePersonal { it.copy(dateOfBirth = v) } }, label = "Date of birth")
+                GlDateField(personal.dateOfBirth, { v -> viewModel.updatePersonal { it.copy(dateOfBirth = v) } }, label = "Date of birth", maxDateMillis = todayUtcMillis())
                 GlTextField(personal.localPhone, { v -> viewModel.updatePersonal { it.copy(localPhone = v) } }, label = "Phone")
                 GlTextField(personal.email, { v -> viewModel.updatePersonal { it.copy(email = v) } }, label = "Email")
                 GlTextField(personal.address, { v -> viewModel.updatePersonal { it.copy(address = v) } }, label = "Address")
