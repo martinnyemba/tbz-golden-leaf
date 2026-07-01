@@ -10,7 +10,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.compose.ui.window.DialogProperties
@@ -28,9 +31,14 @@ import zm.co.tbz.goldenleaf.ui.auth.ForgotPasswordScreen
 import zm.co.tbz.goldenleaf.ui.auth.Login2FAScreen
 import zm.co.tbz.goldenleaf.ui.auth.OnboardingScreen
 import zm.co.tbz.goldenleaf.ui.auth.PortalLoginScreen
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.rememberDrawerState
 import zm.co.tbz.goldenleaf.ui.components.GlBottomNav
 import zm.co.tbz.goldenleaf.ui.components.GlTab
 import zm.co.tbz.goldenleaf.ui.components.glColors
+import zm.co.tbz.goldenleaf.ui.profile.ProfileViewModel
 import zm.co.tbz.goldenleaf.ui.home.DashboardScreen
 import zm.co.tbz.goldenleaf.ui.inspection.CuringInspectionFormScreen
 import zm.co.tbz.goldenleaf.ui.inspection.FieldInspectionFormScreen
@@ -570,6 +578,51 @@ private fun MainShell(
     var selectedTabName by rememberSaveable { mutableStateOf(GlTab.Home.name) }
     val selectedTab = GlTab.valueOf(selectedTabName)
     val c = glColors()
+
+    val drawerState = rememberDrawerState(DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
+    // MenuAccessViewModel / DashboardViewModel / ProfileViewModel resolve to the
+    // same instances the tab screens use (all scoped to the MAIN back-stack entry).
+    val menuAccess by hiltViewModel<MenuAccessViewModel>().state.collectAsState()
+    val profile by hiltViewModel<ProfileViewModel>().profile.collectAsState()
+    val pendingSync by hiltViewModel<DashboardViewModel>().pendingSyncCount.collectAsState()
+
+    fun closeDrawer() = scope.launch { drawerState.close() }
+
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            ModalDrawerSheet(
+                modifier = Modifier.fillMaxWidth(0.86f),
+                drawerContainerColor = c.surface,
+                drawerShape = RoundedCornerShape(topEnd = 24.dp, bottomEnd = 24.dp),
+            ) {
+                GlDrawerContent(
+                    profileName = profile?.full_name?.takeIf { it.isNotBlank() } ?: "TBZ Golden Leaf",
+                    profileEmail = profile?.email.orEmpty(),
+                    roles = profile?.roles.orEmpty(),
+                    access = menuAccess,
+                    activeTab = selectedTab,
+                    pendingSyncCount = pendingSync,
+                    onClose = { closeDrawer() },
+                    onSelectTab = { tab ->
+                        selectedTabName = tab.name
+                        closeDrawer()
+                    },
+                    onNavigate = { route ->
+                        closeDrawer()
+                        navController.navigate(route)
+                    },
+                    onLogout = {
+                        closeDrawer()
+                        navController.navigate(Routes.PORTAL_LOGIN) {
+                            popUpTo(Routes.MAIN) { inclusive = true }
+                        }
+                    },
+                )
+            }
+        },
+    ) {
     GlScaffold(
         containerColor = c.bg,
         bottomBar = {
@@ -594,7 +647,7 @@ private fun MainShell(
                 onOpenNotifications = { navController.navigate(Routes.NOTIFICATIONS) },
                 onOpenPermitValidate = { navController.navigate(Routes.PERMIT_VALIDATE) },
                 onOpenInspectionDetail = { navController.navigate(Routes.inspectionDetail(it)) },
-                onOpenMenu = { navController.navigate(Routes.MENU) },
+                onOpenMenu = { scope.launch { drawerState.open() } },
             )
             GlTab.Permits -> PermitListScreen(
                 modifier = contentModifier,
@@ -620,5 +673,6 @@ private fun MainShell(
                 },
             )
         }
+    }
     }
 }

@@ -51,7 +51,7 @@ import zm.co.tbz.goldenleaf.ui.components.GlSearchBar
 import zm.co.tbz.goldenleaf.ui.components.GlSyncChip
 import zm.co.tbz.goldenleaf.ui.components.GlTone
 import zm.co.tbz.goldenleaf.ui.components.LoadingBox
-import zm.co.tbz.goldenleaf.ui.components.TbzMark
+import zm.co.tbz.goldenleaf.ui.components.toTitleCase
 import zm.co.tbz.goldenleaf.ui.components.glColors
 import java.util.Calendar
 
@@ -125,15 +125,24 @@ fun DashboardScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(c.surfaceAlt)
+                            .clickable(onClick = onOpenMenu),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        GlIcon("menu", size = 20.dp, tint = c.text)
+                    }
                     Row(
                         modifier = Modifier.weight(1f),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
-                        TbzMark(size = 36.dp)
                         Column {
                             Text(greeting, color = c.textMuted, fontSize = 13.sp)
-                            Text(displayName, color = c.text, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold)
+                            Text(displayName.toTitleCase(), color = c.text, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold)
                         }
                     }
                     GlSyncChip(

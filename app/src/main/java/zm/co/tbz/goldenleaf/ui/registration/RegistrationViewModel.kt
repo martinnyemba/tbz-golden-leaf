@@ -18,6 +18,7 @@ import kotlinx.serialization.json.Json
 import zm.co.tbz.goldenleaf.data.local.entity.GrowerEntity
 import zm.co.tbz.goldenleaf.data.local.entity.GrowerRegistrationEntity
 import zm.co.tbz.goldenleaf.data.local.entity.SyncStatuses
+import zm.co.tbz.goldenleaf.data.remote.dto.GrowerCropRecordDto
 import zm.co.tbz.goldenleaf.data.remote.dto.GrowerInspectionDto
 import zm.co.tbz.goldenleaf.data.remote.dto.GrowerPermitDto
 import zm.co.tbz.goldenleaf.data.remote.dto.GrowerSaleDto
@@ -42,6 +43,7 @@ data class GrowerRelatedUiState(
     val isLoading: Boolean = false,
     val loaded: Boolean = false,
     val error: String? = null,
+    val cropRecords: List<GrowerCropRecordDto> = emptyList(),
     val inspections: List<GrowerInspectionDto> = emptyList(),
     val permits: List<GrowerPermitDto> = emptyList(),
     val sales: List<GrowerSaleDto> = emptyList(),
@@ -232,6 +234,7 @@ class RegistrationViewModel @Inject constructor(
                 _relatedState.value = GrowerRelatedUiState(
                     isLoading = false,
                     loaded = true,
+                    cropRecords = related.crop_records,
                     inspections = related.inspections,
                     permits = related.permits,
                     sales = related.sales,

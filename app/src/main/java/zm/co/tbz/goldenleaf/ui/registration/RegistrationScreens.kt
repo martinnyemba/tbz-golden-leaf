@@ -513,13 +513,14 @@ fun GrowerDetailScreen(
                 }
             }
             GlFilterPills(
-                options = listOf("Overview", "Inspections", "Permits", "Sales", "Documents"),
+                options = listOf("Overview", "Crop records", "Inspections", "Permits", "Sales", "Documents"),
                 selected = tab,
                 onSelect = { tab = it },
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp),
             )
             when (tab) {
                 "Overview" -> GrowerDetailOverview(entity, provinces)
+                "Crop records" -> GrowerRelatedCropRecordsTab(related)
                 "Inspections" -> GrowerRelatedInspectionsTab(related)
                 "Permits" -> GrowerRelatedPermitsTab(related)
                 "Sales" -> GrowerRelatedSalesTab(related)
@@ -732,6 +733,78 @@ private fun GrowerRelatedSalesTab(related: GrowerRelatedUiState) {
                 if (index < related.sales.lastIndex) GlDivider()
             }
         }
+    }
+}
+
+@Composable
+private fun GrowerRelatedCropRecordsTab(related: GrowerRelatedUiState) {
+    val c = glColors()
+    GrowerRelatedTab(related, related.cropRecords.isEmpty(), "No crop records for this grower yet.") {
+        Column(
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            related.cropRecords.forEach { crop ->
+                GlCard(contentPadding = 14.dp) {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(Modifier.weight(1f)) {
+                                Text(
+                                    crop.tobacco_type_display.ifBlank { crop.tobacco_type }.ifBlank { "Crop" },
+                                    color = c.text,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                                Text(
+                                    "Season ${crop.season.ifBlank { "—" }}",
+                                    color = c.textMuted,
+                                    fontSize = 11.sp,
+                                    fontFamily = FontFamily.Monospace,
+                                )
+                            }
+                            GlPill(
+                                text = crop.declaration_status_display.ifBlank { prettyRecordStatus(crop.declaration_status) },
+                                tone = recordStatusTone(crop.declaration_status),
+                                size = GlPillSize.Sm,
+                            )
+                        }
+                        GlDivider()
+                        CropStatRow("Hectarage", "${crop.hectarage} ha")
+                        CropStatRow("Yield / ha", "${crop.yield_per_ha.toInt()} kg")
+                        CropStatRow("Expected yield", "${crop.expected_yield_kg.toInt()} kg")
+                        CropStatRow(
+                            "Barns",
+                            "${crop.number_of_barns} × ${crop.barn_type_display.ifBlank { crop.barn_type }.ifBlank { "—" }}",
+                        )
+                        CropStatRow(
+                            "Sponsor",
+                            if (crop.is_self_sponsored) "Self-sponsored" else crop.sponsor.ifBlank { "—" },
+                        )
+                    }
+                }
+            }
+            val totalHa = Math.round(related.cropRecords.sumOf { it.hectarage } * 100) / 100.0
+            val totalExpected = related.cropRecords.sumOf { it.expected_yield_kg }.toInt()
+            Text(
+                "${related.cropRecords.size} entries · $totalHa ha · $totalExpected kg expected",
+                color = c.textMuted,
+                fontSize = 12.sp,
+                modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun CropStatRow(label: String, value: String) {
+    val c = glColors()
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text(label, color = c.textMuted, fontSize = 12.sp)
+        Text(value, color = c.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
     }
 }
 

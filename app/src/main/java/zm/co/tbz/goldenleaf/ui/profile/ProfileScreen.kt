@@ -40,6 +40,7 @@ import zm.co.tbz.goldenleaf.ui.components.GlButtonVariant
 import zm.co.tbz.goldenleaf.ui.components.GlCard
 import zm.co.tbz.goldenleaf.ui.components.GlDivider
 import zm.co.tbz.goldenleaf.ui.components.GlPill
+import zm.co.tbz.goldenleaf.ui.components.toTitleCase
 import zm.co.tbz.goldenleaf.ui.components.GlRow
 import zm.co.tbz.goldenleaf.ui.components.GlSectionHeader
 import zm.co.tbz.goldenleaf.ui.components.GlTone
@@ -97,7 +98,7 @@ fun ProfileScreen(
                 GlAvatar(name = profile?.full_name ?: "?", size = 72.dp, gold = true)
                 Spacer(Modifier.height(12.dp))
                 Text(
-                    profile?.full_name ?: "Not signed in",
+                    profile?.full_name?.toTitleCase() ?: "Not signed in",
                     color = Color.White,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.ExtraBold,
@@ -111,7 +112,7 @@ fun ProfileScreen(
                 if (roles.isNotEmpty()) {
                     Spacer(Modifier.height(10.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        roles.forEach { role -> GlPill(text = role, tone = GlTone.Gold) }
+                        roles.forEach { role -> GlPill(text = role.toTitleCase(), tone = GlTone.Gold) }
                     }
                 }
             }

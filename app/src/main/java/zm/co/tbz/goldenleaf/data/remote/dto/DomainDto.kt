@@ -138,9 +138,28 @@ data class PermitApproveRequest(
 // ── Grower profile related records (Inspections / Permits / Sales tabs) ──────
 @Serializable
 data class GrowerRelatedResponse(
+    val crop_records: List<GrowerCropRecordDto> = emptyList(),
     val inspections: List<GrowerInspectionDto> = emptyList(),
     val permits: List<GrowerPermitDto> = emptyList(),
     val sales: List<GrowerSaleDto> = emptyList(),
+)
+
+@Serializable
+data class GrowerCropRecordDto(
+    val id: String,
+    val season: String = "",
+    val tobacco_type: String = "",
+    val tobacco_type_display: String = "",
+    val hectarage: Double = 0.0,
+    val yield_per_ha: Double = 0.0,
+    val expected_yield_kg: Double = 0.0,
+    val number_of_barns: Int = 0,
+    val barn_type: String = "",
+    val barn_type_display: String = "",
+    val is_self_sponsored: Boolean = false,
+    val sponsor: String = "",
+    val declaration_status: String = "",
+    val declaration_status_display: String = "",
 )
 
 @Serializable
