@@ -28,6 +28,14 @@ interface TrmcsApi {
     @GET("mobile/reference/")
     suspend fun reference(): ReferenceBundleResponse
 
+    /** Approved grades + matrix prices for a buyer + season (drives the bale grade picker). */
+    @GET("mobile/reference/price-matrix/")
+    suspend fun priceMatrix(
+        @Query("buyer") buyer: String,
+        @Query("season") season: String,
+        @Query("tobacco_type") tobaccoType: String? = null,
+    ): PriceMatrixResponse
+
     @GET("mobile/sync/status/")
     suspend fun syncStatus(): SyncStatusResponse
 

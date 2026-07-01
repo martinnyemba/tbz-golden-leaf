@@ -16,6 +16,7 @@ import zm.co.tbz.goldenleaf.data.local.entity.*
         BuyerEntity::class,
         TobaccoTypeEntity::class,
         BarnTypeEntity::class,
+        StakeholderEntity::class,
         GrowerEntity::class,
         GrowerRegistrationEntity::class,
         GrowerEditEntity::class,
@@ -32,7 +33,7 @@ import zm.co.tbz.goldenleaf.data.local.entity.*
         SyncAuditEntity::class,
         GrowerDocumentUploadEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 abstract class TrmsDatabase : RoomDatabase() {

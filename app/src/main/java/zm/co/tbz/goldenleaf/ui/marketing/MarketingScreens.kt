@@ -193,10 +193,12 @@ fun SalesCaptureScreen(
                 else -> BaleRowsStep(
                     bales = state.bales,
                     buyers = buyers.map { it.id to it.name },
+                    gradePriceMatrix = state.gradePriceMatrix,
                     rowErrors = state.rowErrors,
                     isSaving = state.isSaving,
                     saveError = state.saveError,
                     onBaleChange = viewModel::updateBaleRow,
+                    onGradeSelected = viewModel::selectGrade,
                     onAddRow = viewModel::addBaleRow,
                     onRemoveRow = viewModel::removeBaleRow,
                     onBack = { viewModel.goToBatchStep() },
@@ -284,10 +286,12 @@ fun EditPendingSaleScreen(
                 BaleRowsStep(
                     bales = state.bales,
                     buyers = buyers.map { it.id to it.name },
+                    gradePriceMatrix = state.gradePriceMatrix,
                     rowErrors = state.rowErrors,
                     isSaving = state.isSaving,
                     saveError = state.saveError,
                     onBaleChange = viewModel::updateBaleRow,
+                    onGradeSelected = viewModel::selectGrade,
                     onAddRow = viewModel::addBaleRow,
                     onRemoveRow = viewModel::removeBaleRow,
                     onBack = onSaved,
@@ -430,10 +434,12 @@ private fun BatchInfoStep(
 private fun BaleRowsStep(
     bales: List<BaleRowForm>,
     buyers: List<Pair<String, String>>,
+    gradePriceMatrix: Map<String, Map<String, String>>,
     rowErrors: Map<String, Map<String, String>>,
     isSaving: Boolean,
     saveError: String?,
     onBaleChange: (String, (BaleRowForm) -> BaleRowForm) -> Unit,
+    onGradeSelected: (String, String) -> Unit,
     onAddRow: () -> Unit,
     onRemoveRow: (String) -> Unit,
     onBack: () -> Unit,
@@ -455,12 +461,27 @@ private fun BaleRowsStep(
                         label = "Ticket number",
                         error = errs["baleTicketNumber"],
                     )
-                    GlTextField(
-                        value = row.gradeMark,
-                        onValueChange = { onBaleChange(row.localRowId) { r -> r.copy(gradeMark = it) } },
-                        label = "Grade mark",
-                        error = errs["gradeMark"],
-                    )
+                    val grades = gradePriceMatrix[row.tobaccoType].orEmpty()
+                    if (grades.isNotEmpty()) {
+                        // Grades approved for this buyer + tobacco type; picking one
+                        // auto-fills the matrix price (handled in the ViewModel).
+                        GlDropdownField(
+                            label = "Grade mark",
+                            options = grades.keys.map { g -> g to "$g — ${'$'}${grades[g]}/kg" },
+                            selectedId = row.gradeMark,
+                            onSelected = { onGradeSelected(row.localRowId, it) },
+                            error = errs["gradeMark"],
+                        )
+                    } else {
+                        // No matrix loaded (offline, or no buyer chosen) — keep manual
+                        // entry so capture is never blocked.
+                        GlTextField(
+                            value = row.gradeMark,
+                            onValueChange = { onBaleChange(row.localRowId) { r -> r.copy(gradeMark = it) } },
+                            label = "Grade mark",
+                            error = errs["gradeMark"],
+                        )
+                    }
                     GlTextField(
                         value = row.weightKg,
                         onValueChange = { onBaleChange(row.localRowId) { r -> r.copy(weightKg = it) } },
