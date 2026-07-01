@@ -60,7 +60,6 @@ class CorrectionsViewModel @Inject constructor(
                 add(group.toInboxItem())
             }
         }.sortedBy { it.title.lowercase() }
-            .ifEmpty { handoffCorrectionItems }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     fun syncAll() {
@@ -87,7 +86,9 @@ private fun GrowerEntity.toInboxItem() = CorrectionInboxItem(
     type = CorrectionType.GROWER,
     title = listOf(first_name, middle_name, last_name).filterNot { it.isNullOrBlank() }.joinToString(" "),
     ref = tbz_id ?: nrc_number,
-    reason = last_sync_error ?: "Returned for correction — review grower details",
+    reason = correction_reason?.takeIf { it.isNotBlank() }
+        ?: last_sync_error
+        ?: "Returned for correction — review grower details",
     returnedLabel = formatReturned(updated_at_local),
     syncStatus = mapSyncStatus(sync_status),
     icon = "profile",
@@ -102,50 +103,6 @@ private fun TransportPermitEntity.toInboxItem() = CorrectionInboxItem(
     returnedLabel = formatReturned(updated_at_local),
     syncStatus = mapSyncStatus(sync_status),
     icon = "permit",
-)
-
-/** Handoff mock inbox when no returned records exist — matches ScreenCorrectionsInbox artboard 08. */
-private val handoffCorrectionItems = listOf(
-    CorrectionInboxItem(
-        localId = "preview-grower",
-        type = CorrectionType.GROWER,
-        title = "Mary Phiri",
-        ref = "TBZ-2024-04412",
-        reason = "NRC does not match ID document photo",
-        returnedLabel = "09 May 2026",
-        syncStatus = "pending",
-        icon = "profile",
-    ),
-    CorrectionInboxItem(
-        localId = "preview-permit-1",
-        type = CorrectionType.TRANSPORT_PERMIT,
-        title = "Permit PRM-9812",
-        ref = "PRM-9812",
-        reason = "Vehicle plate mismatch — re-enter plate number",
-        returnedLabel = "10 May 2026",
-        syncStatus = "pending",
-        icon = "permit",
-    ),
-    CorrectionInboxItem(
-        localId = "preview-permit-2",
-        type = CorrectionType.TRANSPORT_PERMIT,
-        title = "Permit PRM-9790",
-        ref = "PRM-9790",
-        reason = "Destination sales floor not available — select alternate",
-        returnedLabel = "08 May 2026",
-        syncStatus = "failed",
-        icon = "permit",
-    ),
-    CorrectionInboxItem(
-        localId = "preview-group",
-        type = CorrectionType.GROUP_PERMIT,
-        title = "Group Permit GRP-4481",
-        ref = "GRP-4481",
-        reason = "Manifest has only 1 grower — minimum 2 required",
-        returnedLabel = "07 May 2026",
-        syncStatus = "pending",
-        icon = "users",
-    ),
 )
 
 private fun GroupPermitEntity.toInboxItem() = CorrectionInboxItem(

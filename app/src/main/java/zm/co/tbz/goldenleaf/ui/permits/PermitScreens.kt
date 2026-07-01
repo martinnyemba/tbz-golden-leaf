@@ -57,6 +57,7 @@ import zm.co.tbz.goldenleaf.ui.components.GlStepper
 import zm.co.tbz.goldenleaf.ui.components.GlSyncChip
 import zm.co.tbz.goldenleaf.ui.components.GlTextField
 import zm.co.tbz.goldenleaf.ui.components.GlTone
+import zm.co.tbz.goldenleaf.ui.components.QrCodeImage
 import zm.co.tbz.goldenleaf.ui.components.QrScanButton
 import zm.co.tbz.goldenleaf.ui.components.glColors
 import zm.co.tbz.goldenleaf.ui.components.glVerticalScroll
@@ -188,10 +189,12 @@ fun PermitValidateScreen(
                     modifier = Modifier.fillMaxWidth(),
                 )
                 GlDropdownField(
-                    label = "Sales floor (optional)",
-                    options = listOf("" to "Any") + salesFloors.map { it.id to it.name },
+                    label = "Sales floor",
+                    options = salesFloors.map { it.id to it.name },
                     selectedId = state.salesfloorId,
                     onSelected = viewModel::updateValidateSalesfloor,
+                    required = true,
+                    error = state.salesfloorError,
                 )
                 val result = state.result
                 if (result != null) {
@@ -687,10 +690,24 @@ private fun PermitTicketCard(permit: TransportPermitEntity) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Box(
-                    Modifier.size(108.dp).clip(RoundedCornerShape(14.dp)).background(Color.White),
+                    Modifier.size(108.dp).clip(RoundedCornerShape(14.dp)).background(Color.White).padding(6.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    GlIcon("qr", size = 72.dp, tint = c.primaryDeep)
+                    val token = permit.qr_token
+                    if (!token.isNullOrBlank()) {
+                        QrCodeImage(data = token, modifier = Modifier.size(96.dp))
+                    } else {
+                        // No signed token yet — the server only issues one on approval.
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            GlIcon("qr", size = 52.dp, tint = c.primaryDeep)
+                            Text(
+                                "Issued on approval",
+                                color = c.primaryDeep,
+                                fontSize = 8.sp,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
+                    }
                 }
                 Column(Modifier.weight(1f)) {
                     Text("Grower", color = Color.White.copy(alpha = 0.7f), fontSize = 11.sp)

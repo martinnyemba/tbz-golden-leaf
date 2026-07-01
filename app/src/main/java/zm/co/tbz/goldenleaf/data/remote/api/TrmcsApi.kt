@@ -25,6 +25,10 @@ interface TrmcsApi {
     @GET("mobile/dashboard/")
     suspend fun dashboard(): DashboardResponse
 
+    /** Inspections, permits and sales for one grower (profile tabs). */
+    @GET("mobile/growers/{id}/related/")
+    suspend fun growerRelated(@Path("id") growerId: String): GrowerRelatedResponse
+
     @GET("mobile/reference/")
     suspend fun reference(): ReferenceBundleResponse
 

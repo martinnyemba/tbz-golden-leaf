@@ -43,6 +43,9 @@ class GrowerRepository @Inject constructor(
 ) {
     fun observeGrowers(): Flow<List<GrowerEntity>> = growerDao.observeGrowers()
     fun observeGrowerById(localId: String): Flow<GrowerEntity?> = growerDao.observeGrowerById(localId)
+
+    /** Inspections, permits and sales for a grower, keyed by its server (remote) id. */
+    suspend fun growerRelated(remoteId: String) = api.growerRelated(remoteId)
     fun observeRegistrationById(localId: String): Flow<GrowerRegistrationEntity?> =
         growerDao.observeRegistrationById(localId)
     suspend fun upsertGrower(grower: GrowerEntity) = growerDao.upsertGrower(grower)

@@ -2,6 +2,7 @@ package zm.co.tbz.goldenleaf.data.remote.dto
 
 import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 
@@ -62,6 +63,8 @@ data class TransportPermitDto(
     val buyer: String? = null,
     val is_bought: Boolean? = null,
     val buyer_accepted: Boolean? = null,
+    // Signed QR token, populated by the server once the permit is approved/issued.
+    val qr_code_data: String? = null,
 )
 
 @Serializable
@@ -82,6 +85,8 @@ data class GroupPermitDto(
     val rejection_reason: String? = null,
     val comments: String? = null,
     val entries: List<GroupPermitEntryDto>? = null,
+    // Signed QR token, populated by the server once the group permit is approved/issued.
+    val qr_code_data: String? = null,
 )
 
 @Serializable
@@ -130,6 +135,48 @@ data class PermitApproveRequest(
     val reason: String? = null,
 )
 
+// ── Grower profile related records (Inspections / Permits / Sales tabs) ──────
+@Serializable
+data class GrowerRelatedResponse(
+    val inspections: List<GrowerInspectionDto> = emptyList(),
+    val permits: List<GrowerPermitDto> = emptyList(),
+    val sales: List<GrowerSaleDto> = emptyList(),
+)
+
+@Serializable
+data class GrowerInspectionDto(
+    val id: String,
+    val inspection_type: String = "",
+    val inspection_type_display: String = "",
+    val status: String = "",
+    val scheduled_date: String? = null,
+)
+
+@Serializable
+data class GrowerPermitDto(
+    val id: String,
+    val permit_number: String? = null,
+    val status: String = "",
+    val purpose: String = "",
+    val total_bales: Int = 0,
+    val total_weight_kg: Double = 0.0,
+    val destination_sales_floor: String = "",
+    val valid_from: String? = null,
+    val valid_to: String? = null,
+)
+
+@Serializable
+data class GrowerSaleDto(
+    val id: String,
+    val bale_ticket_number: String = "",
+    val grade_mark: String = "",
+    val weight_kg: Double = 0.0,
+    val status: String = "",
+    val season: String = "",
+    val sale_date: String? = null,
+    val salesfloor: String = "",
+)
+
 @Serializable
 data class InspectionDto(
     val id: String,
@@ -152,6 +199,8 @@ data class VerifyQrResponse(
     val valid: Boolean,
     val permit_number: String? = null,
     val grower_name: String? = null,
+    // The verify-qr endpoint returns this as `grower_tbz_id`.
+    @SerialName("grower_tbz_id")
     val tbz_id: String? = null,
     val total_bales: Int? = null,
     val remaining_bales: Int? = null,

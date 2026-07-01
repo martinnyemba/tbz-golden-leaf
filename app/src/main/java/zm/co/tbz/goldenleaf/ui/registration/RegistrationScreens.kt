@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import zm.co.tbz.goldenleaf.ui.components.GlScaffold
 import zm.co.tbz.goldenleaf.ui.components.glVerticalScroll
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -377,9 +378,15 @@ fun GrowerDetailScreen(
 ) {
     val grower by remember(localId) { viewModel.observeGrower(localId) }.collectAsState()
     val provinces by viewModel.provinces.collectAsState()
+    val related by viewModel.relatedState.collectAsState()
     var tab by remember { mutableStateOf("Overview") }
     val c = glColors()
     val entity = grower
+
+    // Load the grower's server-side records once its remote id is known.
+    LaunchedEffect(entity?.remote_id) {
+        if (entity != null) viewModel.loadGrowerRelated(entity.remote_id)
+    }
     val name = entity?.let { listOfNotNull(it.first_name, it.middle_name, it.last_name).joinToString(" ") } ?: "Grower"
     val tbzId = entity?.tbz_id ?: entity?.nrc_number ?: localId.take(12)
     val returned = entity?.status == "RETURNED_FOR_CORRECTION"
@@ -513,9 +520,9 @@ fun GrowerDetailScreen(
             )
             when (tab) {
                 "Overview" -> GrowerDetailOverview(entity, provinces)
-                "Inspections" -> GrowerDetailEmptyTab("No inspections cached for this grower yet.")
-                "Permits" -> GrowerDetailEmptyTab("No permits cached for this grower yet.")
-                "Sales" -> GrowerDetailEmptyTab("No sales cached for this grower yet.")
+                "Inspections" -> GrowerRelatedInspectionsTab(related)
+                "Permits" -> GrowerRelatedPermitsTab(related)
+                "Sales" -> GrowerRelatedSalesTab(related)
                 "Documents" -> GrowerDetailDocumentsTab(entity)
             }
             Spacer(Modifier.height(24.dp))
@@ -628,6 +635,102 @@ private fun GrowerDetailDocumentsTab(grower: GrowerEntity?) {
                 trailing = { GlIcon("chevron-right", size = 18.dp, tint = c.textSubtle) },
             )
             if (index < docs.lastIndex) GlDivider()
+        }
+    }
+}
+
+/** Shared loading / error / empty handling for the server-backed profile tabs. */
+@Composable
+private fun GrowerRelatedTab(
+    related: GrowerRelatedUiState,
+    isEmpty: Boolean,
+    emptyMessage: String,
+    content: @Composable () -> Unit,
+) {
+    when {
+        related.isLoading && isEmpty ->
+            Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = glColors().primary)
+            }
+        related.error != null && isEmpty ->
+            GlEmptyState(
+                title = "Couldn't load records",
+                subtitle = related.error,
+                icon = "warning",
+                modifier = Modifier.padding(20.dp),
+            )
+        isEmpty -> GrowerDetailEmptyTab(emptyMessage)
+        else -> content()
+    }
+}
+
+private fun prettyRecordStatus(status: String): String =
+    status.replace('_', ' ').lowercase().replaceFirstChar { it.uppercase() }
+
+private fun recordStatusTone(status: String): GlTone = when (status.uppercase()) {
+    "APPROVED", "BOUGHT", "COMPLETED", "PASSED", "ACTIVE", "ACCEPTED" -> GlTone.Success
+    "PENDING", "SCHEDULED", "IN_PROGRESS", "SUBMITTED" -> GlTone.Gold
+    "REJECTED", "FAILED", "CANCELLED", "NO_SALE" -> GlTone.Danger
+    else -> GlTone.Default
+}
+
+@Composable
+private fun GrowerRelatedInspectionsTab(related: GrowerRelatedUiState) {
+    GrowerRelatedTab(related, related.inspections.isEmpty(), "No inspections recorded for this grower yet.") {
+        GlCard(contentPadding = 4.dp, modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp)) {
+            related.inspections.forEachIndexed { index, insp ->
+                GlRow(
+                    title = insp.inspection_type_display.ifBlank { insp.inspection_type }.ifBlank { "Inspection" },
+                    subtitle = insp.scheduled_date?.let { "Scheduled $it" } ?: "—",
+                    leadingIcon = "inspection",
+                    tone = GlTone.Primary,
+                    trailing = { GlPill(text = prettyRecordStatus(insp.status), tone = recordStatusTone(insp.status), size = GlPillSize.Sm) },
+                )
+                if (index < related.inspections.lastIndex) GlDivider()
+            }
+        }
+    }
+}
+
+@Composable
+private fun GrowerRelatedPermitsTab(related: GrowerRelatedUiState) {
+    GrowerRelatedTab(related, related.permits.isEmpty(), "No permits issued for this grower yet.") {
+        GlCard(contentPadding = 4.dp, modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp)) {
+            related.permits.forEachIndexed { index, permit ->
+                val destination = permit.destination_sales_floor.ifBlank { "—" }
+                GlRow(
+                    title = permit.permit_number ?: "Pending permit",
+                    subtitle = "${permit.total_bales} bales · ${permit.total_weight_kg.toInt()} kg → $destination",
+                    leadingIcon = "permit",
+                    tone = GlTone.Primary,
+                    trailing = { GlPill(text = prettyRecordStatus(permit.status), tone = recordStatusTone(permit.status), size = GlPillSize.Sm) },
+                )
+                if (index < related.permits.lastIndex) GlDivider()
+            }
+        }
+    }
+}
+
+@Composable
+private fun GrowerRelatedSalesTab(related: GrowerRelatedUiState) {
+    GrowerRelatedTab(related, related.sales.isEmpty(), "No sales recorded for this grower yet.") {
+        GlCard(contentPadding = 4.dp, modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp)) {
+            related.sales.forEachIndexed { index, sale ->
+                val details = listOfNotNull(
+                    sale.grade_mark.ifBlank { null },
+                    "${sale.weight_kg.toInt()} kg",
+                    sale.salesfloor.ifBlank { null },
+                    sale.sale_date,
+                ).joinToString(" · ")
+                GlRow(
+                    title = sale.bale_ticket_number.ifBlank { "Bale" },
+                    subtitle = details.ifBlank { "—" },
+                    leadingIcon = "bale",
+                    tone = GlTone.Gold,
+                    trailing = { GlPill(text = prettyRecordStatus(sale.status), tone = recordStatusTone(sale.status), size = GlPillSize.Sm) },
+                )
+                if (index < related.sales.lastIndex) GlDivider()
+            }
         }
     }
 }

@@ -1,12 +1,18 @@
 package zm.co.tbz.goldenleaf.ui.permits
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import zm.co.tbz.goldenleaf.ui.components.GlScaffold
@@ -43,6 +49,7 @@ import zm.co.tbz.goldenleaf.ui.components.GlScreenHeader
 import zm.co.tbz.goldenleaf.ui.components.GlSectionHeader
 import zm.co.tbz.goldenleaf.ui.components.GlStepper
 import zm.co.tbz.goldenleaf.ui.components.GlSyncChip
+import zm.co.tbz.goldenleaf.ui.components.QrCodeImage
 import zm.co.tbz.goldenleaf.ui.components.GlTextField
 import zm.co.tbz.goldenleaf.ui.components.GlTone
 import zm.co.tbz.goldenleaf.ui.components.QrScanButton
@@ -641,6 +648,25 @@ private fun GroupPermitDetailContent(permit: GroupPermitEntity) {
                     fontWeight = FontWeight.ExtraBold,
                 )
                 GlPill(text = permit.status, tone = tone)
+            }
+        }
+    }
+    val token = permit.qr_token
+    if (!token.isNullOrBlank()) {
+        GlCard(contentPadding = 16.dp) {
+            Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(
+                    Modifier.size(184.dp).clip(RoundedCornerShape(16.dp)).background(Color.White).padding(10.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    QrCodeImage(data = token, modifier = Modifier.size(164.dp))
+                }
+                Text(
+                    "Show this QR at the sales floor to validate",
+                    color = c.textMuted,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(top = 10.dp),
+                )
             }
         }
     }

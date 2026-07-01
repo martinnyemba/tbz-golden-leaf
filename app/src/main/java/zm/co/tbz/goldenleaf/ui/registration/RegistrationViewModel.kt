@@ -18,6 +18,9 @@ import kotlinx.serialization.json.Json
 import zm.co.tbz.goldenleaf.data.local.entity.GrowerEntity
 import zm.co.tbz.goldenleaf.data.local.entity.GrowerRegistrationEntity
 import zm.co.tbz.goldenleaf.data.local.entity.SyncStatuses
+import zm.co.tbz.goldenleaf.data.remote.dto.GrowerInspectionDto
+import zm.co.tbz.goldenleaf.data.remote.dto.GrowerPermitDto
+import zm.co.tbz.goldenleaf.data.remote.dto.GrowerSaleDto
 import zm.co.tbz.goldenleaf.data.repository.GrowerRepository
 import zm.co.tbz.goldenleaf.data.repository.ReferenceRepository
 import zm.co.tbz.goldenleaf.data.repository.apiStatusForFilter
@@ -32,6 +35,16 @@ data class RegistrationHubStats(
     val pendingSync: Int = 0,
     val synced: Int = 0,
     val failed: Int = 0,
+)
+
+/** Backing data for the grower profile Inspections / Permits / Sales tabs. */
+data class GrowerRelatedUiState(
+    val isLoading: Boolean = false,
+    val loaded: Boolean = false,
+    val error: String? = null,
+    val inspections: List<GrowerInspectionDto> = emptyList(),
+    val permits: List<GrowerPermitDto> = emptyList(),
+    val sales: List<GrowerSaleDto> = emptyList(),
 )
 
 data class RegistrationUiState(
@@ -197,6 +210,39 @@ class RegistrationViewModel @Inject constructor(
             SharingStarted.WhileSubscribed(5_000),
             null,
         )
+
+    private val _relatedState = MutableStateFlow(GrowerRelatedUiState())
+    val relatedState: StateFlow<GrowerRelatedUiState> = _relatedState.asStateFlow()
+
+    /**
+     * Loads the grower's inspections / permits / sales for the profile tabs.
+     * Needs the server (remote) id — a grower that hasn't synced yet has no
+     * server-side records, so we just mark the tabs loaded-and-empty.
+     */
+    fun loadGrowerRelated(remoteId: String?) {
+        if (remoteId.isNullOrBlank()) {
+            _relatedState.value = GrowerRelatedUiState(loaded = true)
+            return
+        }
+        if (_relatedState.value.isLoading) return
+        viewModelScope.launch {
+            _relatedState.update { it.copy(isLoading = true, error = null) }
+            try {
+                val related = growerRepository.growerRelated(remoteId)
+                _relatedState.value = GrowerRelatedUiState(
+                    isLoading = false,
+                    loaded = true,
+                    inspections = related.inspections,
+                    permits = related.permits,
+                    sales = related.sales,
+                )
+            } catch (e: Exception) {
+                _relatedState.update {
+                    it.copy(isLoading = false, loaded = true, error = e.message ?: "Could not load records")
+                }
+            }
+        }
+    }
 
     fun observeRegistration(localId: String): StateFlow<GrowerRegistrationEntity?> =
         growerRepository.observeRegistrationById(localId).stateIn(

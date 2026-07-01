@@ -91,6 +91,8 @@ dependencies {
     implementation("androidx.camera:camera-view:1.6.1")
     implementation("com.google.mlkit:barcode-scanning:17.3.0")
     implementation("com.google.mlkit:text-recognition:16.0.1")
+    // QR generation (rendering issued permit tokens as scannable QR codes)
+    implementation("com.google.zxing:core:3.5.3")
     implementation("org.opencv:opencv:4.10.0")
     implementation("androidx.browser:browser:1.8.0")
 }
