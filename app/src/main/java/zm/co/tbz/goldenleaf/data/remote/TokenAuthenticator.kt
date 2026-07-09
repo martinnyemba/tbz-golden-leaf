@@ -72,10 +72,12 @@ class TokenAuthenticator @Inject constructor(
                     return null
                 }
                 val payload = resp.body?.string() ?: return null
-                val access = json.parseToJsonElement(payload).jsonObject["access"]
-                    ?.jsonPrimitive?.content
-                    ?: return null
-                tokenStore.saveTokens(access, refreshToken, System.currentTimeMillis() + ACCESS_TOKEN_TTL_MS)
+                val obj = json.parseToJsonElement(payload).jsonObject
+                val access = obj["access"]?.jsonPrimitive?.content ?: return null
+                // Server rotates + blacklists the old refresh token; persist the new
+                // one it returns, else the next refresh uses a dead token and 401s.
+                val newRefresh = obj["refresh"]?.jsonPrimitive?.content ?: refreshToken
+                tokenStore.saveTokens(access, newRefresh, System.currentTimeMillis() + ACCESS_TOKEN_TTL_MS)
                 access
             }
         } catch (_: Exception) {
@@ -94,6 +96,7 @@ class TokenAuthenticator @Inject constructor(
     }
 
     companion object {
-        private const val ACCESS_TOKEN_TTL_MS = 55 * 60 * 1000L
+        // Matches the server's SIMPLE_JWT ACCESS_TOKEN_LIFETIME (15 min).
+        private const val ACCESS_TOKEN_TTL_MS = 15 * 60 * 1000L
     }
 }

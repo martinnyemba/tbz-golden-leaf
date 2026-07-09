@@ -34,6 +34,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.launch
+import android.net.Uri
+import androidx.compose.ui.window.Dialog
+import zm.co.tbz.goldenleaf.ui.scan.CameraCaptureScreen
 import zm.co.tbz.goldenleaf.ui.scan.IdDocumentScanning
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -534,28 +537,57 @@ fun RegistrationStepPhotosScreen(
     val scope = rememberCoroutineScope()
     var photoTarget by remember { mutableStateOf<String?>(null) }
     var scanningTarget by remember { mutableStateOf<String?>(null) }
+    var chooserTarget by remember { mutableStateOf<String?>(null) }
+    var cameraCaptureTarget by remember { mutableStateOf<String?>(null) }
+    var pendingCameraTarget by remember { mutableStateOf<String?>(null) }
+    var hasCameraPermission by remember {
+        mutableStateOf(
+            androidx.core.content.ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
+                android.content.pm.PackageManager.PERMISSION_GRANTED,
+        )
+    }
+
+    // Shared post-processing for both gallery pick and camera capture.
+    val applyImage: (Uri, String) -> Unit = { uri, target ->
+        if (target == IdDocumentScanning.TARGET_PROFILE) {
+            viewModel.updatePersonal { it.copy(profilePhotoPath = uri.toString()) }
+        } else {
+            scanningTarget = target
+            scope.launch {
+                val scannedPath = IdDocumentScanning.processPick(context, uri, target)
+                viewModel.updatePersonal {
+                    when (target) {
+                        IdDocumentScanning.TARGET_ID_FRONT -> it.copy(idFrontPath = scannedPath)
+                        IdDocumentScanning.TARGET_ID_BACK -> it.copy(idBackPath = scannedPath)
+                        else -> it
+                    }
+                }
+                scanningTarget = null
+            }
+        }
+    }
+
     val photoPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.PickVisualMedia(),
     ) { uri ->
         val target = photoTarget
         photoTarget = null
-        if (uri == null || target == null) return@rememberLauncherForActivityResult
-        if (target == IdDocumentScanning.TARGET_PROFILE) {
-            viewModel.updatePersonal { it.copy(profilePhotoPath = uri.toString()) }
-            return@rememberLauncherForActivityResult
-        }
-        scanningTarget = target
-        scope.launch {
-            val scannedPath = IdDocumentScanning.processPick(context, uri, target)
-            viewModel.updatePersonal {
-                when (target) {
-                    IdDocumentScanning.TARGET_ID_FRONT -> it.copy(idFrontPath = scannedPath)
-                    IdDocumentScanning.TARGET_ID_BACK -> it.copy(idBackPath = scannedPath)
-                    else -> it
-                }
-            }
-            scanningTarget = null
-        }
+        if (uri != null && target != null) applyImage(uri, target)
+    }
+
+    // In-app capture (CameraX) instead of an external camera intent, so the
+    // process is never killed and the in-progress registration survives.
+    val launchCamera: (String) -> Unit = { target ->
+        cameraCaptureTarget = target
+    }
+
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        hasCameraPermission = granted
+        val target = pendingCameraTarget
+        pendingCameraTarget = null
+        if (granted && target != null) launchCamera(target)
     }
     val photoSlots = listOf(
         Triple("Profile photo", personal.profilePhotoPath != null, IdDocumentScanning.TARGET_PROFILE),
@@ -602,10 +634,7 @@ fun RegistrationStepPhotosScreen(
                                     processing = processing,
                                     onClick = {
                                         if (processing) return@PhotoCaptureCard
-                                        photoTarget = target
-                                        photoPicker.launch(
-                                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
-                                        )
+                                        chooserTarget = target
                                     },
                                     modifier = Modifier.weight(1f),
                                 )
@@ -618,6 +647,84 @@ fun RegistrationStepPhotosScreen(
                     GlBanner(title = it, tone = GlTone.Danger, icon = "warning", modifier = Modifier.padding(top = 12.dp))
                 }
             }
+            }
+        }
+    }
+
+    chooserTarget?.let { target ->
+        PhotoSourceDialog(
+            onDismiss = { chooserTarget = null },
+            onCamera = {
+                chooserTarget = null
+                if (hasCameraPermission) {
+                    launchCamera(target)
+                } else {
+                    pendingCameraTarget = target
+                    cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                }
+            },
+            onGallery = {
+                chooserTarget = null
+                photoTarget = target
+                photoPicker.launch(
+                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
+                )
+            },
+        )
+    }
+
+    cameraCaptureTarget?.let { target ->
+        val label = when (target) {
+            IdDocumentScanning.TARGET_ID_FRONT -> "ID front"
+            IdDocumentScanning.TARGET_ID_BACK -> "ID back"
+            else -> "Profile photo"
+        }
+        CameraCaptureScreen(
+            title = label,
+            onCaptured = { uri ->
+                cameraCaptureTarget = null
+                applyImage(uri, target)
+            },
+            onCancel = { cameraCaptureTarget = null },
+        )
+    }
+}
+
+/** Bottom chooser letting the user capture with the camera or pick from the gallery. */
+@Composable
+private fun PhotoSourceDialog(
+    onDismiss: () -> Unit,
+    onCamera: () -> Unit,
+    onGallery: () -> Unit,
+) {
+    val c = glColors()
+    Dialog(onDismissRequest = onDismiss) {
+        GlCard(contentPadding = 8.dp) {
+            Column {
+                Text(
+                    "Add photo",
+                    color = c.text,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                )
+                GlRow(
+                    title = "Take photo",
+                    subtitle = "Use the camera",
+                    leadingIcon = "camera",
+                    tone = GlTone.Primary,
+                    onClick = onCamera,
+                )
+                GlDivider()
+                GlRow(
+                    title = "Choose from gallery",
+                    subtitle = "Pick an existing photo",
+                    leadingIcon = "image",
+                    tone = GlTone.Primary,
+                    onClick = onGallery,
+                )
+                Spacer(Modifier.height(6.dp))
+                GlButton(text = "Cancel", onClick = onDismiss, variant = GlButtonVariant.Ghost)
             }
         }
     }

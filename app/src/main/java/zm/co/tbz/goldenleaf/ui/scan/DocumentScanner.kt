@@ -3,6 +3,8 @@ package zm.co.tbz.goldenleaf.ui.scan
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Matrix
+import android.media.ExifInterface
 import android.net.Uri
 import java.io.File
 import java.io.FileOutputStream
@@ -327,8 +329,56 @@ object DocumentScanner {
 /** Loads/saves bitmaps for the document scanner into app-private storage as `file://` URIs. */
 object ScannedImageStore {
 
-    fun loadBitmap(context: Context, uri: Uri): Bitmap? =
-        context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) }
+    /**
+     * Cap on the longest edge of the decoded bitmap. Full-resolution camera
+     * captures (12MP+) make the OpenCV crop/dewarp stage crawl or OOM — the warp
+     * allocates float maps the size of the output — so decode downsampled first.
+     */
+    private const val MAX_SCAN_DIMENSION = 2000
+
+    fun loadBitmap(context: Context, uri: Uri): Bitmap? {
+        val resolver = context.contentResolver
+
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+
+        var sample = 1
+        while (maxOf(bounds.outWidth, bounds.outHeight) / sample > MAX_SCAN_DIMENSION) {
+            sample *= 2
+        }
+
+        val decodeOptions = BitmapFactory.Options().apply { inSampleSize = sample }
+        val bitmap = resolver.openInputStream(uri)?.use {
+            BitmapFactory.decodeStream(it, null, decodeOptions)
+        } ?: return null
+
+        val orientation = runCatching {
+            resolver.openInputStream(uri)?.use { input ->
+                ExifInterface(input).getAttributeInt(
+                    ExifInterface.TAG_ORIENTATION,
+                    ExifInterface.ORIENTATION_NORMAL,
+                )
+            }
+        }.getOrNull() ?: ExifInterface.ORIENTATION_NORMAL
+
+        return applyExifRotation(bitmap, orientation)
+    }
+
+    private fun applyExifRotation(bitmap: Bitmap, orientation: Int): Bitmap {
+        val matrix = Matrix()
+        when (orientation) {
+            ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)
+            ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f)
+            ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f)
+            ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> matrix.preScale(-1f, 1f)
+            ExifInterface.ORIENTATION_FLIP_VERTICAL -> matrix.preScale(1f, -1f)
+            else -> return bitmap
+        }
+        return runCatching {
+            Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+        }.getOrDefault(bitmap)
+    }
 
     fun save(context: Context, bitmap: Bitmap, prefix: String): Uri {
         val dir = File(context.filesDir, "scans").apply { mkdirs() }

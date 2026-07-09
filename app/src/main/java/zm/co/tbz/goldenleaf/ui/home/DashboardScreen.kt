@@ -34,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -108,20 +109,21 @@ fun DashboardScreen(
     }
 
     GlScaffold(containerColor = c.bg) { padding ->
-        PullToRefreshBox(
-            isRefreshing = state.isLoading,
-            onRefresh = viewModel::refresh,
-            modifier = modifier.fillMaxSize().padding(padding),
-        ) {
+        Column(modifier.fillMaxSize()) {
+            // Fixed dark-green top nav bar that fills behind the status bar.
             Column(
                 Modifier
-                    .fillMaxSize()
-                    .glVerticalScroll(),
+                    .fillMaxWidth()
+                    .background(Brush.verticalGradient(listOf(c.primaryDeep, c.primary)))
+                    .padding(
+                        start = 20.dp,
+                        end = 20.dp,
+                        top = padding.calculateTopPadding() + 8.dp,
+                        bottom = 14.dp,
+                    ),
             ) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 10.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
@@ -129,21 +131,15 @@ fun DashboardScreen(
                         modifier = Modifier
                             .size(40.dp)
                             .clip(CircleShape)
-                            .background(c.surfaceAlt)
+                            .background(Color.White.copy(alpha = 0.15f))
                             .clickable(onClick = onOpenMenu),
                         contentAlignment = Alignment.Center,
                     ) {
-                        GlIcon("menu", size = 20.dp, tint = c.text)
+                        GlIcon("menu", size = 20.dp, tint = Color.White)
                     }
-                    Row(
-                        modifier = Modifier.weight(1f),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    ) {
-                        Column {
-                            Text(greeting, color = c.textMuted, fontSize = 13.sp)
-                            Text(displayName.toTitleCase(), color = c.text, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold)
-                        }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(greeting, color = Color.White.copy(alpha = 0.8f), fontSize = 13.sp)
+                        Text(displayName.toTitleCase(), color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold)
                     }
                     GlSyncChip(
                         status = syncChipStatus,
@@ -153,11 +149,11 @@ fun DashboardScreen(
                         modifier = Modifier
                             .size(40.dp)
                             .clip(CircleShape)
-                            .background(c.surfaceAlt)
+                            .background(Color.White.copy(alpha = 0.15f))
                             .clickable(onClick = onOpenNotifications),
                         contentAlignment = Alignment.Center,
                     ) {
-                        GlIcon("bell", size = 20.dp, tint = c.text)
+                        GlIcon("bell", size = 20.dp, tint = Color.White)
                         if (unreadNotifications > 0) {
                             Box(
                                 modifier = Modifier
@@ -178,6 +174,22 @@ fun DashboardScreen(
                         }
                     }
                 }
+            }
+
+            PullToRefreshBox(
+                isRefreshing = state.isLoading,
+                onRefresh = viewModel::refresh,
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .padding(bottom = padding.calculateBottomPadding()),
+            ) {
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .glVerticalScroll(),
+            ) {
+                Spacer(Modifier.height(14.dp))
 
                 GlSearchBar(
                     value = "",
@@ -320,6 +332,7 @@ fun DashboardScreen(
                 }
                 Spacer(Modifier.height(12.dp))
             }
+        }
         }
     }
 }

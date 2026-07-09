@@ -92,7 +92,8 @@ class AuthRepository @Inject constructor(
             val response = api.refreshToken(TokenRefreshRequest(refresh))
             tokenStore.saveTokens(
                 response.access,
-                refresh,
+                // Server rotates + blacklists the old refresh token — persist the new one.
+                response.refresh ?: refresh,
                 System.currentTimeMillis() + ACCESS_TOKEN_TTL_MS,
             )
             true
@@ -128,7 +129,10 @@ class AuthRepository @Inject constructor(
     }
 
     companion object {
-        private const val ACCESS_TOKEN_TTL_MS = 55 * 60 * 1000L
-        private const val REFRESH_SKEW_MS = 5 * 60 * 1000L
+        // Matches the server's SIMPLE_JWT ACCESS_TOKEN_LIFETIME (15 min). If this is
+        // set too high, proactive refresh never fires and every request 401s until
+        // the OkHttp authenticator refreshes reactively.
+        private const val ACCESS_TOKEN_TTL_MS = 15 * 60 * 1000L
+        private const val REFRESH_SKEW_MS = 3 * 60 * 1000L
     }
 }

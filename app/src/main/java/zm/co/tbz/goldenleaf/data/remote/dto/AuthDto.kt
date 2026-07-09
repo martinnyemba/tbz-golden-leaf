@@ -27,6 +27,9 @@ data class TokenRefreshRequest(
 @Serializable
 data class TokenRefreshResponse(
     val access: String,
+    // Present when the server rotates refresh tokens (ROTATE_REFRESH_TOKENS).
+    // The old refresh token is blacklisted, so this new one MUST be persisted.
+    val refresh: String? = null,
 )
 
 @Serializable
