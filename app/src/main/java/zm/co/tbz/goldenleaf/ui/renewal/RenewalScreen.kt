@@ -1,15 +1,12 @@
 package zm.co.tbz.goldenleaf.ui.renewal
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.Scaffold
+import zm.co.tbz.goldenleaf.ui.components.GlScaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -17,14 +14,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import zm.co.tbz.goldenleaf.data.local.entity.GrowerEntity
-import zm.co.tbz.goldenleaf.ui.components.InfoBanner
-import zm.co.tbz.goldenleaf.ui.components.TbzTopBar
-import zm.co.tbz.goldenleaf.ui.registration.FormSectionTitle
-import zm.co.tbz.goldenleaf.ui.registration.FormTextField
+import zm.co.tbz.goldenleaf.ui.components.GlAvatar
+import zm.co.tbz.goldenleaf.ui.components.GlBanner
+import zm.co.tbz.goldenleaf.ui.components.GlButton
+import zm.co.tbz.goldenleaf.ui.components.GlCard
+import zm.co.tbz.goldenleaf.ui.components.GlEmptyState
+import zm.co.tbz.goldenleaf.ui.components.GlScreenHeader
+import zm.co.tbz.goldenleaf.ui.components.GlSearchBar
+import zm.co.tbz.goldenleaf.ui.components.GlSectionHeader
+import zm.co.tbz.goldenleaf.ui.components.GlTone
+import zm.co.tbz.goldenleaf.ui.components.glColors
 import zm.co.tbz.goldenleaf.ui.registration.RegistrationViewModel
-import zm.co.tbz.goldenleaf.ui.registration.ScrollableFormColumn
 
 @Composable
 fun RenewalScreen(
@@ -44,21 +47,46 @@ fun RenewalScreen(
     } else {
         emptyList()
     }
+    val c = glColors()
 
-    Scaffold(topBar = { TbzTopBar("Season renewal") }) { padding ->
-        ScrollableFormColumn(Modifier.padding(padding)) {
-            InfoBanner("Renewal updates the grower's crop allocation for the current season.")
-            FormSectionTitle("Find grower")
-            FormTextField(
-                query,
-                viewModel::onSearchChange,
-                "Search by name, TBZ ID, or NRC",
-            )
-            results.forEach { grower ->
-                RenewalGrowerRow(
-                    grower = grower,
-                    onSelect = { onOpenCropAllocation(grower.local_id) },
+    GlScaffold(containerColor = c.bg) { padding ->
+        Column(Modifier.fillMaxSize().padding(padding)) {
+            GlScreenHeader(title = "Season renewal")
+            Column(
+                Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                GlBanner(
+                    title = "Renewal updates the grower's crop allocation for the current season.",
+                    tone = GlTone.Info,
+                    icon = "info",
                 )
+                GlSectionHeader(title = "Find grower")
+                GlSearchBar(
+                    value = query,
+                    onValueChange = viewModel::onSearchChange,
+                    placeholder = "Search by name, TBZ ID, or NRC",
+                )
+                when {
+                    query.length < 2 -> GlEmptyState(
+                        title = "Search for a grower",
+                        icon = "search",
+                        subtitle = "Type at least 2 characters to find a grower to renew",
+                    )
+                    results.isEmpty() -> GlEmptyState(
+                        title = "No matches",
+                        icon = "users",
+                        subtitle = "No growers found for \"$query\"",
+                    )
+                    else -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        results.forEach { grower ->
+                            RenewalGrowerRow(
+                                grower = grower,
+                                onSelect = { onOpenCropAllocation(grower.local_id) },
+                            )
+                        }
+                    }
+                }
             }
         }
     }
@@ -66,17 +94,30 @@ fun RenewalScreen(
 
 @Composable
 private fun RenewalGrowerRow(grower: GrowerEntity, onSelect: () -> Unit) {
-    Card(Modifier.fillMaxWidth().clickable(onClick = onSelect).padding(vertical = 4.dp)) {
+    val c = glColors()
+    GlCard(contentPadding = 12.dp) {
         Row(
-            Modifier.fillMaxWidth().padding(12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            GlAvatar(name = "${grower.first_name} ${grower.last_name}", size = 44.dp)
             Column(Modifier.weight(1f)) {
-                Text("${grower.first_name} ${grower.last_name}", fontWeight = FontWeight.SemiBold)
-                grower.tbz_id?.let { Text("TBZ: $it") }
-                Text("NRC: ${grower.nrc_number}")
+                Text(
+                    "${grower.first_name} ${grower.last_name}",
+                    color = c.text,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp,
+                )
+                grower.tbz_id?.let {
+                    Text("TBZ: $it", color = c.textMuted, fontSize = 12.sp)
+                }
+                Text("NRC: ${grower.nrc_number}", color = c.textMuted, fontSize = 12.sp)
             }
-            Button(onClick = onSelect) { Text("Renew crop") }
+            GlButton(
+                text = "Renew crop",
+                onClick = onSelect,
+                fillMaxWidth = false,
+            )
         }
     }
 }

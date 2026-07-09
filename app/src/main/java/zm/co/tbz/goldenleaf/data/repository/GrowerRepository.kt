@@ -43,13 +43,63 @@ class GrowerRepository @Inject constructor(
 ) {
     fun observeGrowers(): Flow<List<GrowerEntity>> = growerDao.observeGrowers()
     fun observeGrowerById(localId: String): Flow<GrowerEntity?> = growerDao.observeGrowerById(localId)
+
+    /** Inspections, permits and sales for a grower, keyed by its server (remote) id. */
+    suspend fun growerRelated(remoteId: String) = api.growerRelated(remoteId)
     fun observeRegistrationById(localId: String): Flow<GrowerRegistrationEntity?> =
         growerDao.observeRegistrationById(localId)
     suspend fun upsertGrower(grower: GrowerEntity) = growerDao.upsertGrower(grower)
 
     suspend fun upsertGrowersFromServer(growers: List<GrowerEntity>) {
         if (growers.isEmpty()) return
-        growerDao.upsertGrowers(growers)
+        growers.forEach { incoming ->
+            val existing = growerDao.getGrowerById(incoming.local_id)
+            growerDao.upsertGrower(
+                if (existing != null) {
+                    incoming.copy(
+                        profile_photo_path = incoming.profile_photo_path ?: existing.profile_photo_path,
+                        id_front_path = incoming.id_front_path ?: existing.id_front_path,
+                        id_back_path = incoming.id_back_path ?: existing.id_back_path,
+                    )
+                } else {
+                    incoming
+                },
+            )
+        }
+    }
+
+    suspend fun refreshGrowersFromServer(
+        search: String? = null,
+        status: String? = null,
+    ): Int = pullGrowersPage(search = search, status = status, updatedAfter = null)
+
+    suspend fun pullGrowersDelta(updatedAfter: String?): Int =
+        pullGrowersPage(search = null, status = null, updatedAfter = updatedAfter)
+
+    private suspend fun pullGrowersPage(
+        search: String?,
+        status: String?,
+        updatedAfter: String?,
+    ): Int {
+        var page = 1
+        var total = 0
+        var hasNext = true
+        while (hasNext) {
+            val response = api.getGrowers(
+                search = search,
+                status = status,
+                updatedAfter = updatedAfter,
+                page = page,
+            )
+            val entities = response.results.map { dto ->
+                dto.toEntity(growerDao.getGrowerById(dto.id))
+            }
+            upsertGrowersFromServer(entities)
+            total += entities.size
+            hasNext = response.next != null
+            page++
+        }
+        return total
     }
 
     fun observeRegistrations(): Flow<List<GrowerRegistrationEntity>> = growerDao.observeRegistrations()
@@ -233,6 +283,58 @@ class GrowerRepository @Inject constructor(
             ),
         )
         uploadPendingDocuments(clientId)
+        queueCropFromRegistration(clientId, remoteId)
+    }
+
+    suspend fun handleQueueItemResult(clientId: String, status: String, error: String?) {
+        growerDao.getEditById(clientId)?.let { edit ->
+            growerDao.upsertEdit(
+                edit.copy(
+                    sync_status = status,
+                    last_sync_error = error,
+                ),
+            )
+            if (status == SyncStatuses.SYNCED) {
+                growerDao.getGrowerById(edit.grower_local_id)?.let { grower ->
+                    growerDao.upsertGrower(
+                        grower.copy(
+                            sync_status = SyncStatuses.SYNCED,
+                            last_sync_error = null,
+                            updated_at_local = System.currentTimeMillis(),
+                        ),
+                    )
+                }
+            }
+        }
+        growerDao.getRegistrationById(clientId)?.let { registration ->
+            growerDao.upsertRegistration(
+                registration.copy(sync_status = status),
+            )
+        }
+    }
+
+    suspend fun syncEdit(editLocalId: String) {
+        val edit = growerDao.getEditById(editLocalId) ?: return
+        growerDao.upsertEdit(edit.copy(sync_status = SyncStatuses.PENDING, last_sync_error = null))
+        syncCoordinator.scheduleUpload()
+    }
+
+    private suspend fun queueCropFromRegistration(growerLocalId: String, remoteGrowerId: String) {
+        val registration = growerDao.getRegistrationById(growerLocalId) ?: return
+        val cropJson = runCatching {
+            json.parseToJsonElement(registration.data_json).jsonObject["crop"]?.jsonObject
+        }.getOrNull() ?: return
+        val cropPayload = buildJsonObject {
+            cropJson.forEach { (key, value) -> put(key, value) }
+            put("grower", remoteGrowerId)
+        }
+        val cropId = UUID.randomUUID().toString()
+        enqueue(
+            localId = cropId,
+            operation = "POST",
+            endpoint = "growers/crop-allocations/",
+            payloadJson = json.encodeToString(cropPayload),
+        )
     }
 
     suspend fun uploadPendingDocuments(growerLocalId: String) {

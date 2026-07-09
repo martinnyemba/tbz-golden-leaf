@@ -7,7 +7,6 @@ import androidx.work.WorkerParameters
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import zm.co.tbz.goldenleaf.data.local.preferences.UserPreferences
-import zm.co.tbz.goldenleaf.data.local.entity.GrowerEntity
 import zm.co.tbz.goldenleaf.data.local.entity.GroupPermitEntity
 import zm.co.tbz.goldenleaf.data.local.entity.InspectionEntity
 import zm.co.tbz.goldenleaf.data.local.entity.SyncCursorEntity
@@ -35,56 +34,51 @@ class DeltaDownloadWorker @AssistedInject constructor(
     private val inspectionRepository: InspectionRepository,
     private val syncRepository: SyncRepository,
     private val authRepository: AuthRepository,
+    private val referenceRepository: zm.co.tbz.goldenleaf.data.repository.ReferenceRepository,
     private val userPreferences: UserPreferences,
     private val json: Json,
 ) : CoroutineWorker(context, workerParams) {
 
     override suspend fun doWork(): Result {
-        if (!authRepository.refreshSessionIfNeeded()) return Result.retry()
-        return try {
-            pullGrowers()
-            pullTransportPermits()
-            pullGroupPermits()
-            pullInspections()
+        // Best-effort proactive refresh; the OkHttp authenticator also refreshes on 401.
+        authRepository.refreshSessionIfNeeded()
+
+        // Each section is independent: one failing endpoint must not block the rest,
+        // and a partial pull should still update the "last sync" timestamp.
+        val errors = mutableListOf<String>()
+        var anySuccess = false
+        suspend fun section(name: String, block: suspend () -> Unit) {
+            runCatching { block() }
+                .onSuccess { anySuccess = true }
+                .onFailure { errors += "$name: ${it.message ?: it.javaClass.simpleName}" }
+        }
+
+        section("reference") { referenceRepository.refreshReference(force = true) }
+        section("growers") { pullGrowers() }
+        section("transport permits") { pullTransportPermits() }
+        section("group permits") { pullGroupPermits() }
+        section("inspections") { pullInspections() }
+
+        if (anySuccess) {
             userPreferences.setLastSyncAt(System.currentTimeMillis())
-            Result.success()
-        } catch (_: Exception) {
-            Result.retry()
+        }
+        userPreferences.setLastSyncError(errors.takeIf { it.isNotEmpty() }?.joinToString("\n"))
+
+        return when {
+            errors.isEmpty() -> Result.success()
+            anySuccess -> Result.success() // partial; surfaced via lastSyncError
+            else -> Result.retry()
         }
     }
 
     private suspend fun pullGrowers() {
         val cursor = syncRepository.getCursor(ENTITY_GROWERS)
-        var updatedAfter = cursor?.updated_after
-        var pageAfter: String? = null
-        val maxUpdated = cursor?.updated_after
-        do {
-            val page = api.getGrowers(updatedAfter = updatedAfter)
-            val entities = page.results.map { dto ->
-                GrowerEntity(
-                    local_id = dto.id,
-                    remote_id = dto.id,
-                    sync_status = SyncStatuses.SYNCED,
-                    idempotency_key = dto.id,
-                    updated_at_local = System.currentTimeMillis(),
-                    updated_at_server = null,
-                    first_name = dto.first_name,
-                    last_name = dto.last_name,
-                    nrc_number = dto.nrc_number ?: "",
-                    tbz_id = dto.tbz_id,
-                    province = dto.province,
-                    district = dto.district,
-                    status = dto.status,
-                )
-            }
-            growerRepository.upsertGrowersFromServer(entities)
-            pageAfter = page.next
-            updatedAfter = null
-        } while (pageAfter != null)
+        val updatedAfter = cursor?.updated_after
+        growerRepository.pullGrowersDelta(updatedAfter)
         syncRepository.upsertCursor(
             SyncCursorEntity(
                 entity_type = ENTITY_GROWERS,
-                updated_after = maxUpdated ?: nowIso(),
+                updated_after = updatedAfter ?: nowIso(),
                 last_success_at = System.currentTimeMillis(),
             ),
         )
@@ -92,11 +86,11 @@ class DeltaDownloadWorker @AssistedInject constructor(
 
     private suspend fun pullTransportPermits() {
         val cursor = syncRepository.getCursor(ENTITY_PERMITS)
-        var updatedAfter = cursor?.updated_after
-        var pageAfter: String? = null
+        val updatedAfter = cursor?.updated_after
         val maxUpdated = cursor?.updated_after
-        do {
-            val page = api.getTransportPermits(updatedAfter = updatedAfter)
+        var pageNumber = 1
+        while (true) {
+            val page = api.getTransportPermits(updatedAfter = updatedAfter, page = pageNumber)
             val entities = page.results.map { dto ->
                 TransportPermitEntity(
                     local_id = dto.id,
@@ -117,6 +111,7 @@ class DeltaDownloadWorker @AssistedInject constructor(
                     status = dto.status,
                     valid_from = dto.valid_from,
                     valid_to = dto.valid_to,
+                    qr_token = dto.qr_code_data,
                     correction_reason = dto.correction_reason,
                     rejection_reason = dto.rejection_reason,
                     comments = dto.comments,
@@ -127,9 +122,9 @@ class DeltaDownloadWorker @AssistedInject constructor(
                 )
             }
             permitRepository.upsertTransportPermits(entities)
-            pageAfter = page.next
-            updatedAfter = null
-        } while (pageAfter != null)
+            if (page.next == null) break
+            pageNumber++
+        }
         syncRepository.upsertCursor(
             SyncCursorEntity(
                 entity_type = ENTITY_PERMITS,
@@ -141,11 +136,11 @@ class DeltaDownloadWorker @AssistedInject constructor(
 
     private suspend fun pullGroupPermits() {
         val cursor = syncRepository.getCursor(ENTITY_GROUP_PERMITS)
-        var updatedAfter = cursor?.updated_after
-        var pageAfter: String? = null
+        val updatedAfter = cursor?.updated_after
         val maxUpdated = cursor?.updated_after
-        do {
-            val page = api.getGroupPermits(updatedAfter = updatedAfter)
+        var pageNumber = 1
+        while (true) {
+            val page = api.getGroupPermits(updatedAfter = updatedAfter, page = pageNumber)
             val entities = page.results.map { dto ->
                 GroupPermitEntity(
                     local_id = dto.id,
@@ -165,6 +160,7 @@ class DeltaDownloadWorker @AssistedInject constructor(
                     total_weight_kg = dto.total_weight_kg,
                     valid_from = dto.valid_from,
                     valid_to = dto.valid_to,
+                    qr_token = dto.qr_code_data,
                     correction_reason = dto.correction_reason,
                     rejection_reason = dto.rejection_reason,
                     comments = dto.comments,
@@ -172,9 +168,9 @@ class DeltaDownloadWorker @AssistedInject constructor(
                 )
             }
             permitRepository.upsertGroupPermits(entities)
-            pageAfter = page.next
-            updatedAfter = null
-        } while (pageAfter != null)
+            if (page.next == null) break
+            pageNumber++
+        }
         syncRepository.upsertCursor(
             SyncCursorEntity(
                 entity_type = ENTITY_GROUP_PERMITS,
@@ -186,11 +182,11 @@ class DeltaDownloadWorker @AssistedInject constructor(
 
     private suspend fun pullInspections() {
         val cursor = syncRepository.getCursor(ENTITY_INSPECTIONS)
-        var updatedAfter = cursor?.updated_after
-        var pageAfter: String? = null
+        val updatedAfter = cursor?.updated_after
         val maxUpdated = cursor?.updated_after
-        do {
-            val page = api.getInspections(updatedAfter = updatedAfter)
+        var pageNumber = 1
+        while (true) {
+            val page = api.getInspections(updatedAfter = updatedAfter, page = pageNumber)
             val entities = page.results.map { dto ->
                 InspectionEntity(
                     local_id = dto.id,
@@ -206,9 +202,9 @@ class DeltaDownloadWorker @AssistedInject constructor(
                 )
             }
             inspectionRepository.upsertInspections(entities)
-            pageAfter = page.next
-            updatedAfter = null
-        } while (pageAfter != null)
+            if (page.next == null) break
+            pageNumber++
+        }
         syncRepository.upsertCursor(
             SyncCursorEntity(
                 entity_type = ENTITY_INSPECTIONS,

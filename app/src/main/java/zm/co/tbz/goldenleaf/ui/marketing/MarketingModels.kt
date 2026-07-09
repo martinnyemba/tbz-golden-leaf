@@ -61,6 +61,13 @@ data class SalesCaptureState(
     val isSaving: Boolean = false,
     val verifyError: String? = null,
     val saveError: String? = null,
+    /**
+     * Approved grades for the batch's buyer + season, grouped by tobacco-type
+     * code: `{ "FLUE_CURED": { "FCV1": "2.5000", … } }`. Loaded from the price
+     * matrix on entering the bale step; empty when offline or when no buyer is
+     * chosen, in which case grade entry falls back to free text.
+     */
+    val gradePriceMatrix: Map<String, Map<String, String>> = emptyMap(),
 )
 
 data class MarketingHubStats(

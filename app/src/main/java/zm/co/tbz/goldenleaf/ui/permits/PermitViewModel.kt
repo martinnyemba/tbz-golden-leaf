@@ -107,6 +107,7 @@ class PermitViewModel @Inject constructor(
         viewModelScope.launch {
             canApprovePermit.value = accessControl.hasPermissionAsync("permits.approve_permit")
         }
+        viewModelScope.launch { runCatching { referenceRepository.refreshReference() } }
     }
 
     val filteredPermits = combine(transportPermits, _requestState) { list, state ->
@@ -225,22 +226,29 @@ class PermitViewModel @Inject constructor(
     }
 
     fun updateValidateSalesfloor(value: String) {
-        _validateState.update { it.copy(salesfloorId = value, verifyError = null, result = null) }
+        _validateState.update { it.copy(salesfloorId = value, salesfloorError = null, verifyError = null, result = null) }
     }
 
     fun verifyPermit() {
         val state = _validateState.value
-        if (state.permitToken.isBlank()) {
-            _validateState.update { it.copy(verifyError = "Permit token is required") }
+        // The server requires a valid sales-floor UUID (PermitVerifySerializer),
+        // so enforce the selection here instead of sending null and getting a 400.
+        if (state.permitToken.isBlank() || state.salesfloorId.isBlank()) {
+            _validateState.update {
+                it.copy(
+                    verifyError = if (state.permitToken.isBlank()) "Permit token is required" else null,
+                    salesfloorError = if (state.salesfloorId.isBlank()) "Select the sales floor" else null,
+                )
+            }
             return
         }
         viewModelScope.launch {
-            _validateState.update { it.copy(isVerifying = true, verifyError = null) }
+            _validateState.update { it.copy(isVerifying = true, verifyError = null, salesfloorError = null) }
             try {
                 val response = api.verifyQr(
                     VerifyQrRequest(
                         permit_token = state.permitToken.trim(),
-                        salesfloor_id = state.salesfloorId.ifBlank { null },
+                        salesfloor_id = state.salesfloorId,
                     ),
                 )
                 _validateState.update {

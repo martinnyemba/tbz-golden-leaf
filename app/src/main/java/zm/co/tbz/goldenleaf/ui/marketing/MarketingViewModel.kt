@@ -64,6 +64,10 @@ class MarketingViewModel @Inject constructor(
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MarketingHubStats())
 
+    init {
+        viewModelScope.launch { runCatching { referenceRepository.refreshReference() } }
+    }
+
     fun districtsForProvince(provinceId: String) =
         if (provinceId.isBlank()) flowOf(emptyList()) else referenceRepository.observeDistricts(provinceId)
 
@@ -140,7 +144,39 @@ class MarketingViewModel @Inject constructor(
             return false
         }
         _captureState.update { it.copy(step = 3) }
+        loadPriceMatrix()
         return true
+    }
+
+    /**
+     * Loads the buyer + season price matrix so the bale grade picker shows the
+     * grades that buyer has had approved (grouped by tobacco type) and can
+     * auto-fill matrix prices — mirroring the web capture wizard. Best-effort:
+     * offline or no-buyer leaves the matrix empty and grade entry stays manual.
+     */
+    private fun loadPriceMatrix() {
+        val batch = _captureState.value.batch
+        if (batch.buyerId.isBlank() || batch.season.isBlank()) {
+            _captureState.update { it.copy(gradePriceMatrix = emptyMap()) }
+            return
+        }
+        viewModelScope.launch {
+            runCatching { api.priceMatrix(batch.buyerId, batch.season.trim()) }
+                .onSuccess { response ->
+                    val matrix = response.grades
+                        .groupBy { it.tobacco_type }
+                        .mapValues { (_, rows) -> rows.associate { it.grade to it.price_per_kg } }
+                    _captureState.update { it.copy(gradePriceMatrix = matrix) }
+                }
+        }
+    }
+
+    /** Picks a grade for a bale row and auto-fills its matrix price when one exists. */
+    fun selectGrade(rowId: String, grade: String) {
+        updateBaleRow(rowId) { row ->
+            val price = _captureState.value.gradePriceMatrix[row.tobaccoType]?.get(grade)
+            row.copy(gradeMark = grade, pricePerKg = price ?: row.pricePerKg)
+        }
     }
 
     fun goToBatchStep() = _captureState.update { it.copy(step = 2) }
@@ -192,6 +228,7 @@ class MarketingViewModel @Inject constructor(
                 batch = batch,
                 bales = bales,
             )
+            loadPriceMatrix()
         } catch (_: Exception) {
             _captureState.value = SalesCaptureState(
                 step = 1,

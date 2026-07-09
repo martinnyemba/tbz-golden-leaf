@@ -5,6 +5,7 @@ import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
+import org.opencv.android.OpenCVLoader
 
 @HiltAndroidApp
 class GoldenLeafApp : Application(), Configuration.Provider {
@@ -16,4 +17,11 @@ class GoldenLeafApp : Application(), Configuration.Provider {
         get() = Configuration.Builder()
             .setWorkerFactory(workerFactory)
             .build()
+
+    override fun onCreate() {
+        super.onCreate()
+        if (!OpenCVLoader.initLocal()) {
+            android.util.Log.w("GoldenLeafApp", "OpenCV initLocal failed — document scan will fall back to original photos")
+        }
+    }
 }

@@ -25,6 +25,7 @@ data class AppPreferences(
     val autoSyncEnabled: Boolean = true,
     val wifiOnlySync: Boolean = false,
     val lastSyncAt: Long = 0L,
+    val lastSyncError: String? = null,
     val cachedProfileJson: String? = null,
     val referenceVersion: String? = null,
 )
@@ -41,6 +42,7 @@ class UserPreferences @Inject constructor(
             autoSyncEnabled = prefs[KEY_AUTO_SYNC] ?: true,
             wifiOnlySync = prefs[KEY_WIFI_ONLY] ?: false,
             lastSyncAt = prefs[KEY_LAST_SYNC] ?: 0L,
+            lastSyncError = prefs[KEY_LAST_SYNC_ERROR],
             cachedProfileJson = prefs[KEY_PROFILE_JSON],
             referenceVersion = prefs[KEY_REF_VERSION],
         )
@@ -68,6 +70,12 @@ class UserPreferences @Inject constructor(
 
     suspend fun setLastSyncAt(epochMs: Long) {
         context.dataStore.edit { it[KEY_LAST_SYNC] = epochMs }
+    }
+
+    suspend fun setLastSyncError(message: String?) {
+        context.dataStore.edit {
+            if (message == null) it.remove(KEY_LAST_SYNC_ERROR) else it[KEY_LAST_SYNC_ERROR] = message
+        }
     }
 
     suspend fun setCachedProfileJson(json: String?) {
@@ -102,6 +110,7 @@ class UserPreferences @Inject constructor(
         private val KEY_AUTO_SYNC = booleanPreferencesKey("auto_sync_enabled")
         private val KEY_WIFI_ONLY = booleanPreferencesKey("wifi_only_sync")
         private val KEY_LAST_SYNC = longPreferencesKey("last_sync_at")
+        private val KEY_LAST_SYNC_ERROR = stringPreferencesKey("last_sync_error")
         private val KEY_PROFILE_JSON = stringPreferencesKey("cached_profile_json")
         private val KEY_REF_VERSION = stringPreferencesKey("reference_version")
     }

@@ -57,7 +57,7 @@ class LoginViewModel @Inject constructor(
         }
     }
 
-    fun login(onSuccess: () -> Unit) {
+    fun login(onSuccess: () -> Unit, onNeedsOtp: (() -> Unit)? = null) {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
             val current = _state.value
@@ -73,12 +73,16 @@ class LoginViewModel @Inject constructor(
                     _state.update { it.copy(isLoading = false) }
                     onSuccess()
                 }
-                is ApiResult.Error -> _state.update {
-                    it.copy(
-                        isLoading = false,
-                        error = result.message,
-                        requiresOtp = result.requiresOtp || it.requiresOtp,
-                    )
+                is ApiResult.Error -> {
+                    val needsOtp = result.requiresOtp
+                    _state.update {
+                        it.copy(
+                            isLoading = false,
+                            error = if (needsOtp) null else result.message,
+                            requiresOtp = needsOtp || it.requiresOtp,
+                        )
+                    }
+                    if (needsOtp) onNeedsOtp?.invoke()
                 }
             }
         }

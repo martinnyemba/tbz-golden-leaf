@@ -3,27 +3,50 @@ package zm.co.tbz.goldenleaf.ui.registration
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
 import zm.co.tbz.goldenleaf.data.local.entity.GrowerEntity
 import zm.co.tbz.goldenleaf.data.local.entity.GrowerRegistrationEntity
 import zm.co.tbz.goldenleaf.data.local.entity.SyncStatuses
+import zm.co.tbz.goldenleaf.data.remote.dto.GrowerCropRecordDto
+import zm.co.tbz.goldenleaf.data.remote.dto.GrowerInspectionDto
+import zm.co.tbz.goldenleaf.data.remote.dto.GrowerPermitDto
+import zm.co.tbz.goldenleaf.data.remote.dto.GrowerSaleDto
 import zm.co.tbz.goldenleaf.data.repository.GrowerRepository
 import zm.co.tbz.goldenleaf.data.repository.ReferenceRepository
-import javax.inject.Inject
+import zm.co.tbz.goldenleaf.data.repository.apiStatusForFilter
+import zm.co.tbz.goldenleaf.data.repository.changedFieldLabels
+import zm.co.tbz.goldenleaf.data.repository.formatEditTimestamp
+import zm.co.tbz.goldenleaf.data.repository.growerTypeFromWizardKey
+import zm.co.tbz.goldenleaf.data.sync.SyncCoordinator
+import zm.co.tbz.goldenleaf.ui.components.GlTone
 
 data class RegistrationHubStats(
     val totalGrowers: Int = 0,
     val pendingSync: Int = 0,
     val synced: Int = 0,
     val failed: Int = 0,
+)
+
+/** Backing data for the grower profile Inspections / Permits / Sales tabs. */
+data class GrowerRelatedUiState(
+    val isLoading: Boolean = false,
+    val loaded: Boolean = false,
+    val error: String? = null,
+    val cropRecords: List<GrowerCropRecordDto> = emptyList(),
+    val inspections: List<GrowerInspectionDto> = emptyList(),
+    val permits: List<GrowerPermitDto> = emptyList(),
+    val sales: List<GrowerSaleDto> = emptyList(),
 )
 
 data class RegistrationUiState(
@@ -37,16 +60,32 @@ data class RegistrationUiState(
     val searchQuery: String = "",
     val statusFilter: String = "All",
     val syncFilter: String = "All",
+    val updateQueueFilter: String = "All",
+    val lastRegisteredLocalId: String? = null,
+    val correctionDraftSaved: Boolean = false,
+    val isLoadingGrowers: Boolean = false,
+    val growersLoadError: String? = null,
+    val lastRegisteredName: String? = null,
 )
 
 @HiltViewModel
 class RegistrationViewModel @Inject constructor(
     private val growerRepository: GrowerRepository,
     private val referenceRepository: ReferenceRepository,
+    private val syncCoordinator: SyncCoordinator,
+    private val json: Json,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(RegistrationUiState())
     val uiState: StateFlow<RegistrationUiState> = _uiState.asStateFlow()
+
+    init {
+        // The delta download worker also refreshes reference data; the direct
+        // throttled call below loads the dropdowns promptly without a worker.
+        syncCoordinator.scheduleDeltaDownload()
+        viewModelScope.launch { runCatching { referenceRepository.refreshReference() } }
+        refreshGrowers()
+    }
 
     val growers = growerRepository.observeGrowers().stateIn(
         viewModelScope,
@@ -105,10 +144,45 @@ class RegistrationViewModel @Inject constructor(
             val matchesSearch = state.searchQuery.isBlank() ||
                 grower.first_name.contains(state.searchQuery, ignoreCase = true) ||
                 grower.last_name.contains(state.searchQuery, ignoreCase = true) ||
+                grower.middle_name?.contains(state.searchQuery, ignoreCase = true) == true ||
                 grower.nrc_number.contains(state.searchQuery, ignoreCase = true) ||
-                grower.tbz_id?.contains(state.searchQuery, ignoreCase = true) == true
-            val matchesStatus = state.statusFilter == "All" || grower.status == state.statusFilter
-            matchesSearch && matchesStatus
+                grower.tbz_id?.contains(state.searchQuery, ignoreCase = true) == true ||
+                grower.phone_number?.contains(state.searchQuery, ignoreCase = true) == true
+            matchesSearch && matchesPortalStatusFilter(grower, state.statusFilter)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val displayedGrowers = filteredGrowers.map { list ->
+        list.map { it.toListItem() }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val updateQueueStats = edits.map { editList ->
+        Triple(
+            editList.count { it.sync_status == SyncStatuses.PENDING },
+            editList.count { it.sync_status == SyncStatuses.FAILED },
+            editList.count { it.sync_status == SyncStatuses.SYNCED },
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), Triple(0, 0, 0))
+
+    val displayedGrowerUpdates = combine(edits, growers, _uiState) { editList, growerList, state ->
+        val mapped = editList.map { edit ->
+            val grower = growerList.firstOrNull { it.local_id == edit.grower_local_id }
+            val name = grower?.let { listOfNotNull(it.first_name, it.last_name).joinToString(" ") }
+                ?: "Grower ${edit.grower_local_id.take(8)}"
+            GrowerUpdateQueueItem(
+                localId = edit.local_id,
+                growerLocalId = edit.grower_local_id,
+                growerName = name,
+                tbzId = grower?.tbz_id ?: grower?.nrc_number ?: edit.grower_local_id.take(12),
+                changedFields = changedFieldLabels(edit.patch_json, json),
+                status = edit.sync_status,
+                timestamp = formatEditTimestamp(edit.created_at),
+                error = edit.last_sync_error,
+            )
+        }
+        if (state.updateQueueFilter == "All") mapped
+        else mapped.filter {
+            it.status.equals(state.updateQueueFilter.replace(" ", "_"), ignoreCase = true)
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
@@ -139,6 +213,40 @@ class RegistrationViewModel @Inject constructor(
             null,
         )
 
+    private val _relatedState = MutableStateFlow(GrowerRelatedUiState())
+    val relatedState: StateFlow<GrowerRelatedUiState> = _relatedState.asStateFlow()
+
+    /**
+     * Loads the grower's inspections / permits / sales for the profile tabs.
+     * Needs the server (remote) id — a grower that hasn't synced yet has no
+     * server-side records, so we just mark the tabs loaded-and-empty.
+     */
+    fun loadGrowerRelated(remoteId: String?) {
+        if (remoteId.isNullOrBlank()) {
+            _relatedState.value = GrowerRelatedUiState(loaded = true)
+            return
+        }
+        if (_relatedState.value.isLoading) return
+        viewModelScope.launch {
+            _relatedState.update { it.copy(isLoading = true, error = null) }
+            try {
+                val related = growerRepository.growerRelated(remoteId)
+                _relatedState.value = GrowerRelatedUiState(
+                    isLoading = false,
+                    loaded = true,
+                    cropRecords = related.crop_records,
+                    inspections = related.inspections,
+                    permits = related.permits,
+                    sales = related.sales,
+                )
+            } catch (e: Exception) {
+                _relatedState.update {
+                    it.copy(isLoading = false, loaded = true, error = e.message ?: "Could not load records")
+                }
+            }
+        }
+    }
+
     fun observeRegistration(localId: String): StateFlow<GrowerRegistrationEntity?> =
         growerRepository.observeRegistrationById(localId).stateIn(
             viewModelScope,
@@ -146,9 +254,136 @@ class RegistrationViewModel @Inject constructor(
             null,
         )
 
-    fun onSearchChange(value: String) = _uiState.update { it.copy(searchQuery = value) }
-    fun onStatusFilterChange(value: String) = _uiState.update { it.copy(statusFilter = value) }
+    fun onSearchChange(value: String) {
+        _uiState.update { it.copy(searchQuery = value) }
+        refreshGrowers()
+    }
+
+    fun onStatusFilterChange(value: String) {
+        _uiState.update { it.copy(statusFilter = value) }
+        refreshGrowers()
+    }
     fun onSyncFilterChange(value: String) = _uiState.update { it.copy(syncFilter = value) }
+    fun onUpdateQueueFilterChange(value: String) = _uiState.update { it.copy(updateQueueFilter = value) }
+
+    fun applyGrowerTypeKey(key: String) {
+        val (category, growerType) = growerTypeFromWizardKey(key)
+        _uiState.update {
+            it.copy(
+                personal = it.personal.copy(
+                    growerTypeKey = key,
+                    category = category,
+                    growerType = growerType,
+                ),
+            )
+        }
+    }
+
+    fun refreshGrowers() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingGrowers = true, growersLoadError = null) }
+            try {
+                growerRepository.refreshGrowersFromServer(
+                    search = _uiState.value.searchQuery.takeIf { it.isNotBlank() },
+                    status = apiStatusForFilter(_uiState.value.statusFilter),
+                )
+            } catch (e: Exception) {
+                _uiState.update { it.copy(growersLoadError = e.message ?: "Could not load growers") }
+            } finally {
+                _uiState.update { it.copy(isLoadingGrowers = false) }
+            }
+        }
+    }
+
+    /**
+     * Crop type, sponsor, hectarage and barn details are now collected directly
+     * into [CropDetailsForm] by the Farm step, so this only carries the GPS
+     * location captured on the personal/location step into the crop payload.
+     */
+    fun syncCropFromWizardFields() {
+        val personal = _uiState.value.personal
+        updateCrop { crop ->
+            crop.copy(
+                gpsLatitude = crop.gpsLatitude.ifBlank { personal.gpsLatitude },
+                gpsLongitude = crop.gpsLongitude.ifBlank { personal.gpsLongitude },
+            )
+        }
+    }
+
+    fun continueFromIdentity(onSuccess: () -> Unit): Boolean {
+        val errors = validateWizardIdentity(_uiState.value.personal)
+        if (errors.isNotEmpty()) {
+            _uiState.update { it.copy(personalErrors = errors) }
+            return false
+        }
+        onSuccess()
+        return true
+    }
+
+    fun continueFromFarm(onSuccess: () -> Unit): Boolean {
+        syncCropFromWizardFields()
+        val personalErrors = validateWizardFarmLocation(_uiState.value.personal)
+        val cropErrors = validateCrop(_uiState.value.crop)
+        val errors = personalErrors + cropErrors
+        if (errors.isNotEmpty()) {
+            _uiState.update {
+                it.copy(
+                    personalErrors = personalErrors,
+                    cropErrors = cropErrors,
+                )
+            }
+            return false
+        }
+        onSuccess()
+        return true
+    }
+
+    fun saveCorrectionDraft(growerLocalId: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSaving = true, saveError = null) }
+            try {
+                growerRepository.saveGrowerEdit(growerLocalId, _uiState.value.personal)
+                setCorrectionDraftSaved(true)
+            } catch (e: Exception) {
+                _uiState.update { it.copy(saveError = e.message ?: "Save failed") }
+            } finally {
+                _uiState.update { it.copy(isSaving = false) }
+            }
+        }
+    }
+
+    fun syncEdit(editLocalId: String) {
+        viewModelScope.launch { growerRepository.syncEdit(editLocalId) }
+    }
+
+    fun deleteEdit(editLocalId: String) {
+        viewModelScope.launch { growerRepository.deleteLocalEdit(editLocalId) }
+    }
+
+    fun applyScannedNrc(nrc: String) {
+        _uiState.update {
+            it.copy(personal = it.personal.copy(nrcNumber = nrc.trim()))
+        }
+    }
+
+    fun applyScannedIdentity(nrc: String, fullName: String, gender: String, dob: String) {
+        val parts = fullName.trim().split(" ").filter { it.isNotBlank() }
+        val first = parts.firstOrNull().orEmpty()
+        val last = parts.drop(1).joinToString(" ")
+        _uiState.update {
+            it.copy(
+                personal = it.personal.copy(
+                    nrcNumber = nrc,
+                    firstName = first,
+                    lastName = last,
+                    sex = if (gender.equals("F", ignoreCase = true) || gender.equals("Female", ignoreCase = true)) "FEMALE" else "MALE",
+                    dateOfBirth = dob,
+                ),
+            )
+        }
+    }
+
+    fun setCorrectionDraftSaved(saved: Boolean) = _uiState.update { it.copy(correctionDraftSaved = saved) }
 
     fun updatePersonal(transform: (PersonalDetailsForm) -> PersonalDetailsForm) {
         _uiState.update { it.copy(personal = transform(it.personal), personalErrors = emptyMap()) }
@@ -197,7 +432,15 @@ class RegistrationViewModel @Inject constructor(
 
     fun goToPersonalStep() = _uiState.update { it.copy(registrationStep = 1) }
 
+    val lastRegisteredId = _uiState.map { it.lastRegisteredLocalId }.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        null,
+    )
+
     fun resetRegistrationForm() {
+        val lastId = _uiState.value.lastRegisteredLocalId
+        val lastName = _uiState.value.lastRegisteredName
         _uiState.update {
             it.copy(
                 personal = PersonalDetailsForm(),
@@ -206,23 +449,37 @@ class RegistrationViewModel @Inject constructor(
                 personalErrors = emptyMap(),
                 cropErrors = emptyMap(),
                 saveError = null,
+                lastRegisteredLocalId = lastId,
+                lastRegisteredName = lastName,
             )
         }
     }
 
     fun submitRegistration(onCreated: (String) -> Unit) {
+        syncCropFromWizardFields()
+        val personalErrors = validatePersonal(_uiState.value.personal)
         val cropErrors = validateCrop(_uiState.value.crop)
-        if (cropErrors.isNotEmpty()) {
-            _uiState.update { it.copy(cropErrors = cropErrors) }
+        if (personalErrors.isNotEmpty() || cropErrors.isNotEmpty()) {
+            _uiState.update { it.copy(personalErrors = personalErrors, cropErrors = cropErrors) }
             return
         }
         viewModelScope.launch {
             _uiState.update { it.copy(isSaving = true, saveError = null) }
             try {
+                val personal = _uiState.value.personal
+                val registeredName = listOf(personal.firstName, personal.lastName)
+                    .filter { it.isNotBlank() }
+                    .joinToString(" ")
                 val id = growerRepository.createFullRegistration(
-                    personal = _uiState.value.personal,
+                    personal = personal,
                     crop = _uiState.value.crop,
                 )
+                _uiState.update {
+                    it.copy(
+                        lastRegisteredLocalId = id,
+                        lastRegisteredName = registeredName.ifBlank { "Grower" },
+                    )
+                }
                 resetRegistrationForm()
                 onCreated(id)
             } catch (e: Exception) {
@@ -294,6 +551,25 @@ class RegistrationViewModel @Inject constructor(
         }
     }
 
+    private fun validateWizardIdentity(form: PersonalDetailsForm): Map<String, String> {
+        val errors = mutableMapOf<String, String>()
+        if (form.firstName.isBlank() && form.lastName.isBlank()) {
+            errors["firstName"] = "First or last name is required"
+        }
+        if (form.nrcNumber.isBlank()) errors["nrcNumber"] = "NRC / ID is required"
+        if (form.localPhone.isBlank()) errors["localPhone"] = "Phone is required"
+        return errors
+    }
+
+    private fun validateWizardFarmLocation(form: PersonalDetailsForm): Map<String, String> {
+        val errors = mutableMapOf<String, String>()
+        if (form.provinceId.isBlank()) errors["provinceId"] = "Province is required"
+        if (form.districtId.isBlank()) errors["districtId"] = "District is required"
+        if (form.address.isBlank()) errors["address"] = "Address is required"
+        if (form.townVillage.isBlank()) errors["townVillage"] = "Town / village is required"
+        return errors
+    }
+
     private fun validatePersonal(form: PersonalDetailsForm, forEdit: Boolean = false): Map<String, String> {
         val errors = mutableMapOf<String, String>()
         if (form.firstName.isBlank() && form.lastName.isBlank()) {
@@ -331,4 +607,33 @@ class RegistrationViewModel @Inject constructor(
         if (strings == null || strings <= 0) errors["stringsPerBarn"] = "Strings per barn is required"
         return errors
     }
+}
+
+private fun GrowerEntity.toListItem(): GrowerListItem {
+    val name = listOfNotNull(first_name, middle_name, last_name).joinToString(" ")
+    val statusLabel = status.replace('_', ' ').lowercase().replaceFirstChar { it.titlecase() }
+    val statusTone = when (status.uppercase()) {
+        "ACTIVE", "APPROVED" -> GlTone.Success
+        "PENDING", "REVIEW" -> GlTone.Warning
+        "DRAFT" -> GlTone.Default
+        "RETURNED_FOR_CORRECTION" -> GlTone.Gold
+        else -> GlTone.Default
+    }
+    return GrowerListItem(
+        localId = local_id,
+        name = name,
+        tbzId = tbz_id ?: nrc_number,
+        subtitle = listOfNotNull(phone_number, district, province).joinToString(" · ").ifBlank { "—" },
+        statusLabel = statusLabel,
+        statusTone = statusTone,
+        syncStatus = sync_status,
+        riskLabel = "Low",
+        riskTone = GlTone.Success,
+        flagged = status == "RETURNED_FOR_CORRECTION",
+    )
+}
+
+private fun matchesPortalStatusFilter(grower: GrowerEntity, filter: String): Boolean {
+    val apiStatus = apiStatusForFilter(filter) ?: return true
+    return grower.status.equals(apiStatus, ignoreCase = true)
 }

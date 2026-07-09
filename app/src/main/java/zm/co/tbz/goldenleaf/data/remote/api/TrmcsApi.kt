@@ -25,8 +25,20 @@ interface TrmcsApi {
     @GET("mobile/dashboard/")
     suspend fun dashboard(): DashboardResponse
 
+    /** Inspections, permits and sales for one grower (profile tabs). */
+    @GET("mobile/growers/{id}/related/")
+    suspend fun growerRelated(@Path("id") growerId: String): GrowerRelatedResponse
+
     @GET("mobile/reference/")
     suspend fun reference(): ReferenceBundleResponse
+
+    /** Approved grades + matrix prices for a buyer + season (drives the bale grade picker). */
+    @GET("mobile/reference/price-matrix/")
+    suspend fun priceMatrix(
+        @Query("buyer") buyer: String,
+        @Query("season") season: String,
+        @Query("tobacco_type") tobaccoType: String? = null,
+    ): PriceMatrixResponse
 
     @GET("mobile/sync/status/")
     suspend fun syncStatus(): SyncStatusResponse
@@ -55,21 +67,24 @@ interface TrmcsApi {
     suspend fun getGrowers(
         @Query("search") search: String? = null,
         @Query("status") status: String? = null,
-        @Query("updated_after") updatedAfter: String? = null
+        @Query("updated_after") updatedAfter: String? = null,
+        @Query("page") page: Int? = null,
     ): PagedResponse<GrowerDto>
 
     @GET("permits/transport-permits/")
     suspend fun getTransportPermits(
         @Query("search") search: String? = null,
         @Query("status") status: String? = null,
-        @Query("updated_after") updatedAfter: String? = null
+        @Query("updated_after") updatedAfter: String? = null,
+        @Query("page") page: Int? = null,
     ): PagedResponse<TransportPermitDto>
 
     @GET("permits/group-permits/")
     suspend fun getGroupPermits(
         @Query("search") search: String? = null,
         @Query("status") status: String? = null,
-        @Query("updated_after") updatedAfter: String? = null
+        @Query("updated_after") updatedAfter: String? = null,
+        @Query("page") page: Int? = null,
     ): PagedResponse<GroupPermitDto>
 
     @GET("inspectorate/inspections/")
@@ -77,7 +92,8 @@ interface TrmcsApi {
         @Query("search") search: String? = null,
         @Query("inspection_type") type: String? = null,
         @Query("status") status: String? = null,
-        @Query("updated_after") updatedAfter: String? = null
+        @Query("updated_after") updatedAfter: String? = null,
+        @Query("page") page: Int? = null,
     ): PagedResponse<InspectionDto>
 
     // --- Marketing ---

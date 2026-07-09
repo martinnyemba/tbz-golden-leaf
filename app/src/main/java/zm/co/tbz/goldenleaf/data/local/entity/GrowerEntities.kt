@@ -33,7 +33,11 @@ data class GrowerEntity(
     val profile_photo_path: String? = null,
     val id_front_path: String? = null,
     val id_back_path: String? = null,
-    val status: String
+    val status: String,
+    val grower_type: String? = null,
+    val correction_reason: String? = null,
+    val correction_requested_at: String? = null,
+    val correction_reviewer_name: String? = null,
 )
 
 @Entity(tableName = "grower_registrations")
@@ -50,5 +54,6 @@ data class GrowerEditEntity(
     val grower_local_id: String,
     val sync_status: String = "pending",
     val patch_json: String,
-    val created_at: Long = System.currentTimeMillis()
+    val created_at: Long = System.currentTimeMillis(),
+    val last_sync_error: String? = null,
 )

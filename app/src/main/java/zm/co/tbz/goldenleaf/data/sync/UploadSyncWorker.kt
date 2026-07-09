@@ -69,6 +69,7 @@ class UploadSyncWorker @AssistedInject constructor(
                         status = status,
                         error = result.error,
                     )
+                    growerRepository.handleQueueItemResult(result.client_id, status, result.error)
                     if (status == SyncStatuses.SYNCED) {
                         result.server_data?.let { serverData ->
                             val encoded = json.encodeToString(JsonElement.serializer(), serverData)

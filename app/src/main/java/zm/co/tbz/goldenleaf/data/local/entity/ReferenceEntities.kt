@@ -48,3 +48,10 @@ data class BarnTypeEntity(
     @PrimaryKey val id: String,
     val name: String
 )
+
+@Entity(tableName = "reference_stakeholders")
+data class StakeholderEntity(
+    @PrimaryKey val id: String,
+    val name: String,
+    val code: String? = null
+)

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Camera-capture temp images live in the app cache. -->
+    <cache-path name="camera_captures" path="camera/" />
+    <external-cache-path name="external_camera_captures" path="camera/" />
+</paths>

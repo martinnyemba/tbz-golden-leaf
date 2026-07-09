@@ -47,6 +47,7 @@ data class PermitValidateState(
     val salesfloorId: String = "",
     val isVerifying: Boolean = false,
     val verifyError: String? = null,
+    val salesfloorError: String? = null,
     val result: zm.co.tbz.goldenleaf.ui.marketing.VerifiedPermitInfo? = null,
 )
 
